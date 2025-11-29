@@ -1,97 +1,45 @@
 import React, { useState } from 'react';
+import { INTEGRATION_PLATFORMS, MIME_TYPES } from '../data/defaults';
 import { IntegrationPlatform } from '../types';
-import { Copy, Check, Terminal, Code2, Settings } from 'lucide-react';
-
-const INTEGRATIONS: IntegrationPlatform[] = [
-  {
-    id: 'curl',
-    name: 'cURL / Shell',
-    icon: 'Terminal',
-    template: ({ prompt, mimeType }) => `curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=$API_KEY" \\
--H 'Content-Type: application/json' \\
--d '{
-  "contents": [{
-    "parts": [
-      {"text": "${prompt}"},
-      {"inline_data": {
-        "mime_type": "${mimeType}",
-        "data": "BASE64_IMAGE_DATA"
-      }}
-    ]
-  }]
-}'`
-  },
-  {
-    id: 'nodejs',
-    name: 'Node.js (Google GenAI SDK)',
-    icon: 'Code2',
-    template: ({ prompt, mimeType }) => `import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-async function generateMockup() {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [
-        { inlineData: { mimeType: '${mimeType}', data: base64ImageString } },
-        { text: '${prompt}' }
-      ]
-    }
-  });
-  
-  console.log(response.text);
-}`
-  },
-  {
-    id: 'python',
-    name: 'Python',
-    icon: 'Code2',
-    template: ({ prompt, mimeType }) => `import os
-from google import genai
-from google.genai import types
-
-client = genai.Client(api_key=os.environ["API_KEY"])
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents=[
-        types.Part.from_bytes(image_bytes, "${mimeType}"),
-        "${prompt}"
-    ]
-)
-
-print(response.text)`
-  }
-];
-
-const MIME_TYPES = [
-  { value: 'image/png', label: 'PNG Image' },
-  { value: 'image/jpeg', label: 'JPEG Image' },
-  { value: 'image/webp', label: 'WebP Image' },
-  { value: 'image/heic', label: 'HEIC Image' },
-];
+import { Copy, Check, Terminal, Code2, Settings, FileType, Share2 } from 'lucide-react';
 
 interface IntegrationCodeProps {
   lastPrompt?: string;
 }
 
 export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) => {
-  const [selectedPlatform, setSelectedPlatform] = useState(INTEGRATIONS[0]);
+  const [selectedPlatform, setSelectedPlatform] = useState<IntegrationPlatform>(INTEGRATION_PLATFORMS[0]);
   const [selectedMimeType, setSelectedMimeType] = useState('image/png');
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
   const promptToUse = lastPrompt || "A futuristic product shot...";
+  
   const codeSnippet = selectedPlatform.template({ 
     prompt: promptToUse, 
     imageBase64: null, 
-    mimeType: selectedMimeType 
+    mimeType: selectedMimeType,
+    webhookUrl: webhookUrl
   });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(codeSnippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getMimeLabel = (mime: string) => {
+    const type = MIME_TYPES.find(t => t.value === mime);
+    return type ? type.label.split(' ')[0] : 'IMG';
+  };
+
+  const renderIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Terminal': return <Terminal className="w-4 h-4" />;
+      case 'Code2': return <Code2 className="w-4 h-4" />;
+      case 'Share2': return <Share2 className="w-4 h-4" />;
+      default: return <Code2 className="w-4 h-4" />;
+    }
   };
 
   return (
@@ -104,34 +52,57 @@ export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) 
       </div>
 
       <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl">
-        <div className="flex border-b border-slate-700 bg-slate-800/50">
-           {INTEGRATIONS.map(platform => (
+        <div className="flex border-b border-slate-700 bg-slate-800/50 overflow-x-auto">
+           {INTEGRATION_PLATFORMS.map(platform => (
              <button
                key={platform.id}
                onClick={() => setSelectedPlatform(platform)}
-               className={`px-6 py-4 flex items-center gap-2 font-medium transition-colors ${selectedPlatform.id === platform.id ? 'bg-slate-900 text-blue-400 border-t-2 border-t-blue-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+               className={`px-6 py-4 flex items-center gap-2 font-medium transition-colors whitespace-nowrap ${selectedPlatform.id === platform.id ? 'bg-slate-900 text-blue-400 border-t-2 border-t-blue-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
              >
-               {platform.id === 'curl' ? <Terminal className="w-4 h-4" /> : <Code2 className="w-4 h-4" />}
+               {renderIcon(platform.icon)}
                {platform.name}
              </button>
            ))}
         </div>
 
         {/* Configuration Toolbar */}
-        <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+        <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+           {/* General Settings */}
            <div className="flex items-center gap-3">
              <Settings className="w-4 h-4 text-slate-500" />
-             <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Input Image Format:</label>
-             <select 
-               value={selectedMimeType}
-               onChange={(e) => setSelectedMimeType(e.target.value)}
-               className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm rounded-md px-3 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
-             >
-               {MIME_TYPES.map(t => (
-                 <option key={t.value} value={t.value}>{t.label} ({t.value})</option>
-               ))}
-             </select>
+             <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Format:</label>
+             <div className="flex items-center gap-2">
+               <select 
+                 value={selectedMimeType}
+                 onChange={(e) => setSelectedMimeType(e.target.value)}
+                 className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm rounded-md px-3 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
+               >
+                 {MIME_TYPES.map(t => (
+                   <option key={t.value} value={t.value}>{t.label} ({t.value})</option>
+                 ))}
+               </select>
+
+               {/* Visual Indicator Badge */}
+               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                 <FileType className="w-3 h-3 text-indigo-400" />
+                 <span className="text-xs font-bold text-indigo-300">{getMimeLabel(selectedMimeType)}</span>
+               </div>
+             </div>
            </div>
+
+           {/* Discord Specific Settings */}
+           {selectedPlatform.id === 'discord' && (
+             <div className="flex items-center gap-2 flex-1 md:justify-end animate-fadeIn">
+                <label className="text-xs font-medium text-slate-400 uppercase tracking-wider whitespace-nowrap">Webhook URL:</label>
+                <input 
+                  type="text" 
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:ring-1 focus:ring-blue-500 outline-none w-full md:w-64"
+                />
+             </div>
+           )}
         </div>
 
         <div className="p-6 relative group">

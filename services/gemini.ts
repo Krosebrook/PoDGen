@@ -8,9 +8,8 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Helper to convert base64 to the format expected by the SDK if needed, 
-// though the SDK handles base64 in parts well.
-// We expect standard base64 strings (without the data:image/png;base64, prefix sometimes, but SDK wants clean base64)
+// Helper to convert base64 to the format expected by the SDK if needed.
+// We expect standard base64 strings.
 const cleanBase64 = (b64: string) => {
   return b64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 };
@@ -46,24 +45,27 @@ export const generateOrEditImage = async (
           },
         ],
       },
-      // Note: responseMimeType is not supported for nano banana models
     });
 
-    // Parse the response to find the image part
-    if (response.candidates && response.candidates[0].content.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData && part.inlineData.data) {
-          // Construct a data URL for the frontend to display
-          return `data:image/png;base64,${part.inlineData.data}`;
+    // Parse the response to find the image part strictly
+    if (response.candidates && response.candidates.length > 0) {
+        const parts = response.candidates[0].content?.parts;
+        if (parts) {
+            for (const part of parts) {
+                if (part.inlineData && part.inlineData.data) {
+                  // Construct a data URL for the frontend to display
+                  return `data:image/png;base64,${part.inlineData.data}`;
+                }
+            }
         }
-      }
     }
     
-    // Fallback if no image found (might be text refusal)
-    throw new Error("No image generated. The model might have refused the request or returned only text.");
+    // Fallback if no image found (might be text refusal or filtering)
+    throw new Error("No image generated. The model might have refused the request or returned only text content.");
     
   } catch (error) {
     console.error("Gemini API Error:", error);
+    // Rethrow to allow hooks to handle specific error messages
     throw error;
   }
 };

@@ -1,19 +1,22 @@
 import React, { useState, useRef } from 'react';
-import { generateOrEditImage } from '../services/gemini';
+import { useGenAI } from '../hooks/useGenAI';
 import { Spinner } from './ui/Spinner';
-import { Upload, Wand2, Download, RefreshCw, Image as ImageIcon, AlertCircle, XCircle } from 'lucide-react';
+import { Alert } from './ui/Alert';
+import { Button } from './ui/Button';
+import { Upload, Wand2, Download, RefreshCw, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
 }
 
+const QUICK_PROMPTS = ['Remove background', 'Add cyberpunk neon lights', 'Turn into a sketch', 'Make it a vector art'];
+
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [resultImage, setResultImage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { loading, error, resultImage, generate, clearError, reset } = useGenAI();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -21,8 +24,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        setResultImage(null);
-        setError(null);
+        reset();
       };
       reader.readAsDataURL(file);
     }
@@ -30,43 +32,17 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
 
   const handleEdit = async () => {
     if (!selectedImage || !prompt) return;
-
-    setLoading(true);
-    setError(null);
-    setResultImage(null);
-
-    try {
-      const result = await generateOrEditImage(selectedImage, prompt);
-      setResultImage(result);
-      onImageGenerated(result, prompt);
-    } catch (err: any) {
-      console.error("Generation error:", err);
-      let msg = "An unexpected error occurred.";
-      
-      if (err instanceof Error) {
-        msg = err.message;
-      } else if (typeof err === 'string') {
-        msg = err;
-      }
-
-      // Improve user-facing error messages
-      if (msg.includes("403") || msg.toLowerCase().includes("api key")) {
-        msg = "Access denied. Please verify your API key configuration.";
-      } else if (msg.includes("429")) {
-        msg = "System is busy (Rate Limit). Please wait a moment before trying again.";
-      } else if (msg.toLowerCase().includes("safety")) {
-        msg = "The request was blocked by safety filters. Try adjusting your prompt or source image.";
-      } else if (msg.toLowerCase().includes("refused")) {
-        msg = "The model refused the request. Try a simpler prompt.";
-      }
-
-      setError(msg);
-    } finally {
-      setLoading(false);
+    const success = await generate(selectedImage, prompt);
+    if (success && resultImage) {
+        onImageGenerated(resultImage, prompt);
     }
   };
 
-  const clearError = () => setError(null);
+  const handleReset = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedImage(null);
+      reset();
+  };
 
   return (
     <div className="flex flex-col h-full space-y-6">
@@ -100,7 +76,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               accept="image/*"
             />
             {selectedImage && (
-              <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2 hover:bg-black/80 transition" onClick={(e) => { e.stopPropagation(); setSelectedImage(null); setResultImage(null); setError(null); }}>
+              <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2 hover:bg-black/80 transition" onClick={handleReset}>
                  <RefreshCw className="w-4 h-4 text-white" />
               </div>
             )}
@@ -114,27 +90,28 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               <input
                 type="text"
                 value={prompt}
-                onChange={(e) => { setPrompt(e.target.value); if(error) setError(null); }}
-                placeholder="E.g., 'Add a retro filter', 'Remove background', 'Make it snowy'"
+                onChange={(e) => { setPrompt(e.target.value); clearError(); }}
+                placeholder="E.g., 'Add a retro filter', 'Remove background'"
                 className={`flex-1 bg-slate-900 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none ${error ? 'border-red-500/50' : 'border-slate-600 focus:border-transparent'}`}
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
               />
-              <button
-                onClick={handleEdit}
-                disabled={!selectedImage || !prompt || loading}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+              <Button 
+                onClick={handleEdit} 
+                loading={loading} 
+                loadingText="Editing..." 
+                disabled={!selectedImage || !prompt}
+                icon={<Wand2 className="w-5 h-5" />}
               >
-                {loading ? <Spinner /> : <Wand2 className="w-5 h-5" />}
-                {loading ? 'Editing...' : 'Generate'}
-              </button>
+                Generate
+              </Button>
             </div>
             
             {/* Quick Prompts */}
             <div className="mt-4 flex flex-wrap gap-2">
-              {['Remove background', 'Add cyberpunk neon lights', 'Turn into a sketch', 'Make it a vector art'].map((p) => (
+              {QUICK_PROMPTS.map((p) => (
                 <button 
                   key={p}
-                  onClick={() => { setPrompt(p); if(error) setError(null); }}
+                  onClick={() => { setPrompt(p); clearError(); }}
                   className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-full transition-colors border border-slate-600"
                 >
                   {p}
@@ -142,19 +119,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               ))}
             </div>
 
-            {/* Inline Error for Left Column */}
-            {error && (
-              <div className="mt-4 p-3 bg-red-900/20 border border-red-900/30 rounded-lg flex items-start gap-3 animate-fadeIn">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                   <p className="text-sm text-red-200 font-medium">Generation Failed</p>
-                   <p className="text-xs text-red-300/80 mt-1 leading-relaxed">{error}</p>
-                </div>
-                <button onClick={clearError} className="text-red-400 hover:text-red-300 p-1">
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            {error && <Alert message={error} onDismiss={clearError} />}
           </div>
         </div>
 
@@ -186,12 +151,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
                     </div>
                     <h3 className="text-slate-200 font-semibold text-lg mb-2">Oops! Something went wrong</h3>
                     <p className="text-slate-400 text-sm mb-4">{error}</p>
-                    <button 
-                      onClick={() => handleEdit()}
-                      className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors border border-slate-600"
-                    >
-                      Try Again
-                    </button>
+                    <Button variant="secondary" onClick={() => handleEdit()} className="w-full">Try Again</Button>
                  </div>
               ) : (
                 <div className="text-slate-600 flex flex-col items-center">

@@ -3,6 +3,7 @@ export interface MerchProduct {
   name: string;
   description: string;
   defaultPrompt: string;
+  placeholderImage: string;
 }
 
 export interface GeneratedImage {
@@ -13,11 +14,18 @@ export interface GeneratedImage {
   type: 'edit' | 'merch';
 }
 
+export interface IntegrationTemplateParams {
+  prompt: string;
+  imageBase64: string | null;
+  mimeType: string;
+  webhookUrl?: string;
+}
+
 export interface IntegrationPlatform {
   id: string;
   name: string;
-  icon: string;
-  template: (data: { prompt: string; imageBase64: string | null; mimeType: string }) => string;
+  icon: string; // Storing icon name as string to allow dynamic rendering if needed, or component
+  template: (params: IntegrationTemplateParams) => string;
 }
 
 export enum AppMode {
