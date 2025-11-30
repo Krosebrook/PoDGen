@@ -8,13 +8,13 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// Helper to convert base64 to the format expected by the SDK if needed.
-// We expect standard base64 strings.
+// Remove standard base64 prefix
 const cleanBase64 = (b64: string) => {
-  return b64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  return b64.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, "");
 };
 
-const getMimeType = (b64: string) => {
+// Robustly detect mime type from base64 header
+const getMimeType = (b64: string): string => {
   const match = b64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
   return match ? match[1] : 'image/png';
 };

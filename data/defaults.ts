@@ -84,6 +84,27 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Comfortable beanie hat',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Beanie',
     defaultPrompt: 'A {style_preference} closeup of a comfortable beanie hat, perfect for embroidery, with this logo stitched onto the folded cuff.'
+  },
+  {
+    id: 'phone-case-rugged',
+    name: 'Rugged Phone Case',
+    description: 'Heavy-duty protection',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Rugged+Case',
+    defaultPrompt: 'A {style_preference} studio shot of a heavy-duty rugged phone case standing upright, showcasing reinforced corners and this logo printed on the back plate.'
+  },
+  {
+    id: 'sticker-holo',
+    name: 'Holographic Stickers',
+    description: 'Prismatic effect vinyl',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Holo+Stickers',
+    defaultPrompt: 'A {style_preference} close-up shot of a holographic sticker reflecting rainbow colors, applied to a skateboard deck, featuring this logo clearly.'
+  },
+  {
+    id: 'mug-enamel',
+    name: 'Enamel Camp Mug',
+    description: 'Vintage speckled finish',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Camp+Mug',
+    defaultPrompt: 'A {style_preference} outdoor shot of a vintage speckled enamel mug resting on a wooden picnic table, with this logo featured on the front.'
   }
 ];
 

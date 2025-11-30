@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Upload, ShoppingBag, Download, Layers, AlertCircle, Lightbulb } from 'lucide-react';
 import { MerchProduct } from '../types';
 import { MERCH_PRODUCTS } from '../data/defaults';
+import { readImageFile } from '../utils/file';
 
 interface MerchStudioProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -26,17 +27,16 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
   const { loading, error, resultImage, generate, clearError, reset } = useGenAI();
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Immediately reset previous results to avoid confusion
-      reset();
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      reset(); // Clear previous results
+      try {
+        const base64 = await readImageFile(file);
+        setLogoImage(base64);
+      } catch (err) {
+        console.error("Failed to read logo:", err);
+      }
     }
   };
 
@@ -51,12 +51,10 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
     if (success) {
       if (onImageGenerated) {
-        // onImageGenerated callback if needed
+        onImageGenerated(resultImage!, finalPrompt);
       }
     } else {
-      // If generation failed, clear the logo to force/prompt user to retry with potentially different settings/image
-      // As requested: "modify the handleGenerate function to clear the logoImage state if the generation fails"
-      setLogoImage(null);
+      setLogoImage(null); // Clear logo on failure
     }
   };
 
