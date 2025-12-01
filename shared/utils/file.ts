@@ -1,34 +1,26 @@
+
+import { ValidationError } from './errors';
+
 export const MAX_FILE_SIZE_MB = 5;
 export const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic'];
 
-export class FileValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'FileValidationError';
-  }
-}
-
 /**
  * Validates file size and type.
- * @throws FileValidationError
+ * @throws ValidationError
  */
-export const validateFile = (file: File) => {
+export const validateFile = (file: File): void => {
   if (!file.type.startsWith('image/')) {
-    throw new FileValidationError('The selected file is not a valid image.');
+    throw new ValidationError('The selected file is not a valid image.');
   }
 
-  // Check generic MIME type support if needed, though 'image/*' covers most.
-  // We can be stricter if API requires it.
-  
   const sizeInMB = file.size / (1024 * 1024);
   if (sizeInMB > MAX_FILE_SIZE_MB) {
-    throw new FileValidationError(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit.`);
+    throw new ValidationError(`File size exceeds the ${MAX_FILE_SIZE_MB}MB limit.`);
   }
 };
 
 /**
  * Reads a File object and returns a Promise that resolves with the Base64 Data URL.
- * Handles errors during file reading and performs validation.
  */
 export const readImageFile = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -45,12 +37,12 @@ export const readImageFile = (file: File): Promise<string> => {
       if (typeof reader.result === 'string') {
         resolve(reader.result);
       } else {
-        reject(new Error('Failed to read file data.'));
+        reject(new ValidationError('Failed to read file data.'));
       }
     };
 
     reader.onerror = () => {
-      reject(new Error('Error occurred while reading the file.'));
+      reject(new ValidationError('Error occurred while reading the file.'));
     };
 
     reader.readAsDataURL(file);
@@ -59,7 +51,6 @@ export const readImageFile = (file: File): Promise<string> => {
 
 /**
  * Extracts the first image file from a DragEvent or ClipboardEvent.
- * Returns the File object or null if no image is found.
  */
 export const extractImageFile = (items: DataTransferItemList | undefined): File | null => {
   if (!items) return null;

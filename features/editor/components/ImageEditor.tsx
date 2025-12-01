@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useGenAI } from '../hooks/useGenAI';
-import { Spinner } from './ui/Spinner';
-import { Alert } from './ui/Alert';
-import { Button } from './ui/Button';
-import { Upload, Wand2, Download, RefreshCw, Image as ImageIcon, AlertCircle } from 'lucide-react';
-import { readImageFile, extractImageFile } from '../utils/file';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useGenAI } from '@/shared/hooks/useGenAI';
+import { Spinner } from '@/shared/components/ui/Spinner';
+import { Alert } from '@/shared/components/ui/Alert';
+import { Button } from '@/shared/components/ui/Button';
+import { Wand2, Download, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { readImageFile, extractImageFile } from '@/shared/utils/file';
+import { ImageDropzone } from './ImageDropzone';
 
 interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -15,62 +17,23 @@ const QUICK_PROMPTS = ['Remove background', 'Add cyberpunk neon lights', 'Turn i
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { loading, error: apiError, resultImage, generate, clearError: clearApiError, reset } = useGenAI();
-
-  // Combine local validation errors with API errors
   const error = localError || apiError;
-  const clearError = () => {
+
+  const processFile = useCallback(async (file: File) => {
     setLocalError(null);
     clearApiError();
-  };
-
-  // Unified file processor
-  const processFile = useCallback(async (file: File) => {
-    clearError();
     try {
       const base64 = await readImageFile(file);
       setSelectedImage(base64);
-      reset(); // Clear previous results
+      reset();
     } catch (err: any) {
-      console.error("File processing error:", err);
       setLocalError(err.message || "Failed to process file.");
     }
-  }, [reset]);
+  }, [reset, clearApiError]);
 
-  // Handle File Input Change
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
-  };
-
-  // Handle Drag Over
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  // Handle Drag Leave
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  // Handle Drop
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  // Handle Paste (Global)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const file = extractImageFile(e.clipboardData?.items);
@@ -79,7 +42,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
         processFile(file);
       }
     };
-
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, [processFile]);
@@ -92,11 +54,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
     }
   };
 
-  const handleReset = (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const handleReset = () => {
       setSelectedImage(null);
       reset();
-      clearError();
+      setLocalError(null);
+      clearApiError();
   };
 
   return (
@@ -104,51 +66,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
         {/* Input Section */}
         <div className="flex flex-col space-y-4">
-          <div 
-            className={`flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all cursor-pointer
-              ${isDragging 
-                ? 'border-blue-500 bg-blue-500/10' 
-                : error 
-                  ? 'border-red-500/50 bg-slate-800/50' 
-                  : 'border-slate-700 bg-slate-800/50 hover:border-blue-500 hover:bg-slate-800'
-              }`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {selectedImage ? (
-              <img 
-                src={selectedImage} 
-                alt="Original" 
-                className="max-h-full max-w-full object-contain p-4"
-              />
-            ) : (
-              <div className="text-center p-6 pointer-events-none">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${isDragging ? 'bg-blue-600' : 'bg-slate-700 group-hover:bg-blue-600'}`}>
-                  <Upload className={`w-8 h-8 ${isDragging ? 'text-white' : 'text-slate-300'}`} />
-                </div>
-                <p className="text-slate-300 font-medium text-lg">
-                  {isDragging ? 'Drop Image Here' : 'Upload Source Image'}
-                </p>
-                <p className="text-slate-500 text-sm mt-2">
-                  Click to browse, drag & drop, or paste (Ctrl+V)
-                </p>
-              </div>
-            )}
-            <input 
-              type="file" 
-              ref={fileInputRef}
-              onChange={handleFileChange} 
-              className="hidden" 
-              accept="image/*"
-            />
-            {selectedImage && (
-              <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2 hover:bg-black/80 transition z-10" onClick={handleReset}>
-                 <RefreshCw className="w-4 h-4 text-white" />
-              </div>
-            )}
-          </div>
+          <ImageDropzone 
+            selectedImage={selectedImage}
+            onFileSelect={processFile}
+            onReset={handleReset}
+            error={error}
+          />
 
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <label className="block text-sm font-medium text-slate-400 mb-2">
@@ -158,7 +81,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               <input
                 type="text"
                 value={prompt}
-                onChange={(e) => { setPrompt(e.target.value); clearError(); }}
+                onChange={(e) => { setPrompt(e.target.value); if(localError) setLocalError(null); clearApiError(); }}
                 placeholder="E.g., 'Add a retro filter', 'Remove background'"
                 className={`flex-1 bg-slate-900 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none ${error ? 'border-red-500/50' : 'border-slate-600 focus:border-transparent'}`}
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
@@ -174,12 +97,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               </Button>
             </div>
             
-            {/* Quick Prompts */}
             <div className="mt-4 flex flex-wrap gap-2">
               {QUICK_PROMPTS.map((p) => (
                 <button 
                   key={p}
-                  onClick={() => { setPrompt(p); clearError(); }}
+                  onClick={() => { setPrompt(p); setLocalError(null); clearApiError(); }}
                   className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-full transition-colors border border-slate-600"
                 >
                   {p}
@@ -187,7 +109,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               ))}
             </div>
 
-            {error && <Alert message={error} onDismiss={clearError} />}
+            {error && <Alert message={error} onDismiss={() => { setLocalError(null); clearApiError(); }} />}
           </div>
         </div>
 

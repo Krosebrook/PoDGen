@@ -1,16 +1,16 @@
+
 import React, { useState } from 'react';
-import { ImageEditor } from './components/ImageEditor';
-import { MerchStudio } from './components/MerchStudio';
-import { IntegrationCode } from './components/IntegrationCode';
-import { AppMode } from './types';
+import { ImageEditor } from './features/editor/components/ImageEditor';
+import { MerchStudio } from './features/merch/components/MerchStudio';
+import { IntegrationCode } from './features/integrations/components/IntegrationCode';
+import { AppMode } from './shared/types';
 import { Wand2, Shirt, Code, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AppMode>(AppMode.EDITOR);
+  const [activeTab, setActiveTab] = useState<AppMode>('EDITOR');
   const [lastPrompt, setLastPrompt] = useState<string>("");
 
   const handleImageGenerated = (url: string, prompt: string) => {
-    // We could store history here if needed
     setLastPrompt(prompt);
   };
 
@@ -30,9 +30,9 @@ const App: React.FC = () => {
           
           <nav className="flex items-center gap-1 bg-slate-800/50 p-1 rounded-lg border border-slate-700/50">
             <button
-              onClick={() => setActiveTab(AppMode.EDITOR)}
+              onClick={() => setActiveTab('EDITOR')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === AppMode.EDITOR 
+                activeTab === 'EDITOR' 
                   ? 'bg-slate-700 text-white shadow-sm' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
@@ -41,9 +41,9 @@ const App: React.FC = () => {
               AI Editor
             </button>
             <button
-              onClick={() => setActiveTab(AppMode.MERCH)}
+              onClick={() => setActiveTab('MERCH')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === AppMode.MERCH 
+                activeTab === 'MERCH' 
                   ? 'bg-slate-700 text-white shadow-sm' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
@@ -52,9 +52,9 @@ const App: React.FC = () => {
               Merch Studio
             </button>
             <button
-              onClick={() => setActiveTab(AppMode.INTEGRATIONS)}
+              onClick={() => setActiveTab('INTEGRATIONS')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === AppMode.INTEGRATIONS 
+                activeTab === 'INTEGRATIONS' 
                   ? 'bg-slate-700 text-white shadow-sm' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
@@ -64,14 +64,14 @@ const App: React.FC = () => {
             </button>
           </nav>
 
-          <div className="w-8"></div> {/* Spacer for balance */}
+          <div className="w-8"></div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="h-[calc(100vh-8rem)]">
-          {activeTab === AppMode.EDITOR && (
+          {activeTab === 'EDITOR' && (
             <div className="h-full animate-fadeIn">
                <div className="mb-6">
                  <h1 className="text-2xl font-bold text-white mb-2">AI Image Editor</h1>
@@ -83,7 +83,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === AppMode.MERCH && (
+          {activeTab === 'MERCH' && (
             <div className="h-full animate-fadeIn">
                <div className="mb-6">
                  <h1 className="text-2xl font-bold text-white mb-2">On-Demand Merch Generator</h1>
@@ -95,7 +95,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === AppMode.INTEGRATIONS && (
+          {activeTab === 'INTEGRATIONS' && (
             <div className="h-full animate-fadeIn">
               <IntegrationCode lastPrompt={lastPrompt} />
             </div>
@@ -103,7 +103,6 @@ const App: React.FC = () => {
         </div>
       </main>
       
-      {/* Simple Footer style */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
