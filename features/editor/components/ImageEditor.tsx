@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGenAI } from '@/shared/hooks/useGenAI';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { Alert } from '@/shared/components/ui/Alert';
 import { Button } from '@/shared/components/ui/Button';
-import { Wand2, Download, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Input } from '@/shared/components/ui/Input';
+import { Wand2, Download, Image as ImageIcon, AlertCircle, Eraser } from 'lucide-react';
 import { readImageFile, extractImageFile } from '@/shared/utils/file';
 import { ImageDropzone } from './ImageDropzone';
 
@@ -12,7 +12,7 @@ interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
 }
 
-const QUICK_PROMPTS = ['Remove background', 'Add cyberpunk neon lights', 'Turn into a sketch', 'Make it a vector art'];
+const QUICK_PROMPTS = ['Add cyberpunk neon lights', 'Turn into a sketch', 'Make it a vector art'];
 
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -78,12 +78,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               How would you like to edit this image?
             </label>
             <div className="flex gap-2">
-              <input
-                type="text"
+              <Input
                 value={prompt}
                 onChange={(e) => { setPrompt(e.target.value); if(localError) setLocalError(null); clearApiError(); }}
                 placeholder="E.g., 'Add a retro filter', 'Remove background'"
-                className={`flex-1 bg-slate-900 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none ${error ? 'border-red-500/50' : 'border-slate-600 focus:border-transparent'}`}
+                className="flex-1"
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
               />
               <Button 
@@ -97,16 +96,30 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               </Button>
             </div>
             
-            <div className="mt-4 flex flex-wrap gap-2">
-              {QUICK_PROMPTS.map((p) => (
-                <button 
-                  key={p}
-                  onClick={() => { setPrompt(p); setLocalError(null); clearApiError(); }}
-                  className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-full transition-colors border border-slate-600"
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="mt-4 flex flex-col gap-3">
+               {/* Primary Quick Actions */}
+               <div className="flex gap-2">
+                  <button
+                    onClick={() => { setPrompt('Remove background'); setLocalError(null); clearApiError(); }}
+                    className="flex items-center gap-2 text-sm bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 px-4 py-2 rounded-lg border border-indigo-500/20 transition-all w-full sm:w-auto justify-center"
+                  >
+                    <Eraser className="w-4 h-4" />
+                    Remove Background
+                  </button>
+               </div>
+
+               {/* Secondary Prompts */}
+               <div className="flex flex-wrap gap-2">
+                  {QUICK_PROMPTS.map((p) => (
+                    <button 
+                      key={p}
+                      onClick={() => { setPrompt(p); setLocalError(null); clearApiError(); }}
+                      className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-full transition-colors border border-slate-600"
+                    >
+                      {p}
+                    </button>
+                  ))}
+               </div>
             </div>
 
             {error && <Alert message={error} onDismiss={() => { setLocalError(null); clearApiError(); }} />}

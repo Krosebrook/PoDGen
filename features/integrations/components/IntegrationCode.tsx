@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { INTEGRATION_PLATFORMS, MIME_TYPES, IntegrationPlatform } from '../data/platforms';
 import { Copy, Check, Terminal, Code2, Settings, FileType, Share2 } from 'lucide-react';
+import { Card, Input, Badge } from '@/shared/components/ui';
 
 interface IntegrationCodeProps {
   lastPrompt?: string;
@@ -51,7 +51,8 @@ export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) 
         </p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl">
+      <Card className="shadow-2xl" noPadding>
+        {/* Platform Selector */}
         <div className="flex border-b border-slate-700 bg-slate-800/50 overflow-x-auto">
            {INTEGRATION_PLATFORMS.map(platform => (
              <button
@@ -65,7 +66,9 @@ export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) 
            ))}
         </div>
 
+        {/* Configuration Toolbar */}
         <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+           {/* General Settings */}
            <div className="flex items-center gap-3">
              <Settings className="w-4 h-4 text-slate-500" />
              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Format:</label>
@@ -80,27 +83,26 @@ export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) 
                  ))}
                </select>
 
-               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20">
-                 <FileType className="w-3 h-3 text-indigo-400" />
-                 <span className="text-xs font-bold text-indigo-300">{getMimeLabel(selectedMimeType)}</span>
-               </div>
+               <Badge variant="indigo" icon={<FileType className="w-3 h-3" />}>
+                 {getMimeLabel(selectedMimeType)}
+               </Badge>
              </div>
            </div>
 
+           {/* Discord Specific Settings */}
            {selectedPlatform.id === 'discord' && (
              <div className="flex items-center gap-2 flex-1 md:justify-end animate-fadeIn">
-                <label className="text-xs font-medium text-slate-400 uppercase tracking-wider whitespace-nowrap">Webhook URL:</label>
-                <input 
-                  type="text" 
+                <Input 
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
                   placeholder="https://discord.com/api/webhooks/..."
-                  className="bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:ring-1 focus:ring-blue-500 outline-none w-full md:w-64"
+                  className="md:w-64"
                 />
              </div>
            )}
         </div>
 
+        {/* Code View */}
         <div className="p-6 relative group">
            <div className="absolute top-4 right-4 z-10">
               <button 
@@ -116,7 +118,7 @@ export const IntegrationCode: React.FC<IntegrationCodeProps> = ({ lastPrompt }) 
              <code>{codeSnippet}</code>
            </pre>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

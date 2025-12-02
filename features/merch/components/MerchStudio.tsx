@@ -1,13 +1,13 @@
-
 import React, { useRef } from 'react';
 import { useMerchState } from '../hooks/useMerchState';
 import { useGenAI } from '@/shared/hooks/useGenAI';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { Alert } from '@/shared/components/ui/Alert';
 import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 import { StepSection } from './StepSection';
 import { ProductGrid } from './ProductGrid';
-import { Upload, ShoppingBag, Download, Layers, AlertCircle, Lightbulb, Image as ImageIcon, X } from 'lucide-react';
+import { Upload, ShoppingBag, Download, Layers, AlertCircle, Image as ImageIcon, X } from 'lucide-react';
 
 interface MerchStudioProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -74,9 +74,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
     const success = await generate(logoImage, finalPrompt, additionalImages);
 
     if (success && onImageGenerated && resultImage) {
-        // We might want to pass resultImage here but due to async state it might not be set yet 
-        // in this closure if useGenAI doesn't return it.
-        // However, useGenAI sets state. The useEffect in App.tsx might be better, or just rely on state.
+        // Callback handled via hook state, but logic here ensures parent knows success
     } else if (!success) {
       clearLogo(); 
     }
@@ -144,12 +142,11 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
         {/* Step 4: Style */}
         <StepSection number={4} title="Style Preference">
-           <input
-             type="text"
+           <Input
              value={stylePreference}
              onChange={(e) => setStylePreference(e.target.value)}
              placeholder="E.g. minimalist, vintage, cyberpunk..."
-             className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none text-sm mb-3"
+             className="mb-3"
            />
            <div className="flex flex-wrap gap-2">
              {STYLE_PRESETS.map((style) => (
