@@ -1,15 +1,11 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AppError, ErrorCode, RateLimitError, SafetyError, ApiError } from '../shared/utils/errors';
+import { AppError, ErrorCode, RateLimitError, SafetyError, ApiError, AuthenticationError } from '../shared/utils/errors';
 
 const getClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new AppError(
-      "API Key is missing. Please ensure process.env.API_KEY is available.",
-      ErrorCode.AUTHENTICATION_ERROR,
-      401
-    );
+    throw new AuthenticationError("API Key is missing. Please ensure process.env.API_KEY is available.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -26,6 +22,46 @@ const getMimeType = (b64: string): string => {
 };
 
 /**
+ * Maps raw Gemini/Fetch errors to domain AppError types.
+ */
+const mapGeminiError = (error: any): AppError => {
+  if (error instanceof AppError) return error;
+
+  const msg = error.message || String(error);
+  const status = error.status || error.response?.status;
+
+  // Handle specific HTTP Status Codes if available
+  if (status === 429 || msg.includes("429")) {
+    return new RateLimitError();
+  }
+  
+  if (status === 401 || status === 403 || msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("api key")) {
+    return new AuthenticationError("Access denied. Please check your API key configuration.");
+  }
+
+  if (status === 503 || msg.includes("503") || msg.includes("overloaded")) {
+    return new ApiError("The model is currently overloaded. Please try again in a few moments.", 503);
+  }
+
+  // Handle Content Safety / Policy Errors
+  if (
+    msg.toLowerCase().includes("safety") || 
+    msg.toLowerCase().includes("blocked") || 
+    msg.toLowerCase().includes("policy")
+  ) {
+    return new SafetyError("The request was blocked by safety filters. Please verify your prompt and source image.");
+  }
+
+  // Handle Invalid Requests
+  if (status === 400 || msg.includes("400")) {
+    return new ApiError("Invalid request. The image format or prompt might be unsupported.", 400);
+  }
+
+  // Fallback
+  return new ApiError(msg, status || 500);
+};
+
+/**
  * Generates or edits an image using Gemini.
  * @param mainImageBase64 The primary image.
  * @param prompt The text instruction.
@@ -36,10 +72,10 @@ export const generateOrEditImage = async (
   prompt: string,
   additionalImagesBase64: string[] = []
 ): Promise<string> => {
-  const ai = getClient();
-  const model = "gemini-2.5-flash-image";
-
   try {
+    const ai = getClient();
+    const model = "gemini-2.5-flash-image";
+
     const parts: any[] = [];
 
     // 1. Add Main Image
@@ -80,28 +116,18 @@ export const generateOrEditImage = async (
                 }
             }
         }
+        
+        // If we have candidates but no image part, check finishReason
+        const finishReason = response.candidates[0].finishReason;
+        if (finishReason === "SAFETY") {
+          throw new SafetyError("Generation stopped due to safety concerns.");
+        }
     }
     
-    throw new ApiError("No image generated. The model might have refused the request or returned only text content.", 422);
+    throw new ApiError("No image generated. The model returned a response without image data.", 422);
     
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-
-    // Map errors to AppError types
-    if (error instanceof AppError) throw error;
-
-    const msg = error.message || String(error);
-
-    if (msg.includes("429")) {
-      throw new RateLimitError();
-    }
-    if (msg.toLowerCase().includes("safety") || msg.toLowerCase().includes("blocked")) {
-      throw new SafetyError(msg);
-    }
-    if (msg.toLowerCase().includes("api key") || msg.includes("403")) {
-      throw new AppError("Invalid or missing API Key.", ErrorCode.AUTHENTICATION_ERROR, 403);
-    }
-
-    throw new ApiError(msg);
+    console.error("Gemini Service Error:", error);
+    throw mapGeminiError(error);
   }
 };

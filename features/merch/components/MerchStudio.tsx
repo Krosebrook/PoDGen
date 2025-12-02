@@ -1,24 +1,18 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useMerchState } from '../hooks/useMerchState';
 import { useGenAI } from '@/shared/hooks/useGenAI';
 import { Spinner } from '@/shared/components/ui/Spinner';
 import { Alert } from '@/shared/components/ui/Alert';
 import { Button } from '@/shared/components/ui/Button';
-import { Input } from '@/shared/components/ui/Input';
 import { StepSection } from './StepSection';
 import { ProductGrid } from './ProductGrid';
-import { Upload, ShoppingBag, Download, Layers, AlertCircle, Image as ImageIcon, X } from 'lucide-react';
+import { UploadArea } from './UploadArea';
+import { StyleSelector } from './StyleSelector';
+import { ShoppingBag, Download, Layers, AlertCircle } from 'lucide-react';
 
 interface MerchStudioProps {
   onImageGenerated: (url: string, prompt: string) => void;
 }
-
-const STYLE_PRESETS = [
-  'photorealistic',
-  'vector art',
-  'vintage poster',
-  'minimalist branding'
-];
 
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
   const { 
@@ -28,30 +22,21 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
   } = useMerchState();
 
   const { loading, error, resultImage, generate, clearError, reset } = useGenAI();
-  
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const bgInputRef = useRef<HTMLInputElement>(null);
 
-  const onLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      reset(); 
-      try {
-        await handleLogoUpload(file);
-      } catch (err: any) {
-        alert(err.message);
-      }
+  const onLogoSelect = async (file: File) => {
+    reset(); 
+    try {
+      await handleLogoUpload(file);
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
-  const onBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await handleBgUpload(file);
-      } catch (err: any) {
-        alert(err.message);
-      }
+  const onBgSelect = async (file: File) => {
+    try {
+      await handleBgUpload(file);
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -73,92 +58,46 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
     
     const success = await generate(logoImage, finalPrompt, additionalImages);
 
-    if (success && onImageGenerated && resultImage) {
-        // Callback handled via hook state, but logic here ensures parent knows success
+    if (success && resultImage) {
+      onImageGenerated(resultImage, finalPrompt);
     } else if (!success) {
-      clearLogo(); 
+      // Don't clear logo automatically on error to allow retry, unless strict requirement
+      // clearLogo(); 
     }
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-      {/* Sidebar */}
+      {/* Sidebar Controls */}
       <div className="lg:col-span-4 flex flex-col space-y-6 overflow-y-auto pr-2 custom-scrollbar pb-20">
         
-        {/* Step 1: Upload */}
         <StepSection number={1} title="Upload Brand Asset">
-          <div 
-            onClick={() => logoInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-600 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-700/50 hover:border-blue-500 transition-all group relative overflow-hidden"
-          >
-            {logoImage ? (
-               <div className="relative w-full aspect-square bg-slate-900/50 rounded flex items-center justify-center p-2">
-                 <img src={logoImage} alt="Uploaded" className="max-w-full max-h-full object-contain" />
-                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <span className="text-white text-sm font-medium">Change Image</span>
-                 </div>
-               </div>
-            ) : (
-               <>
-                 <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-400" />
-                 <span className="text-sm text-slate-400">Click to upload logo</span>
-               </>
-            )}
-            <input type="file" ref={logoInputRef} onChange={onLogoChange} className="hidden" accept="image/*" />
-          </div>
+          <UploadArea 
+            image={logoImage} 
+            onFileSelect={onLogoSelect} 
+            placeholder="Upload Logo or Design"
+            onClear={logoImage ? clearLogo : undefined}
+          />
         </StepSection>
 
-        {/* Step 2: Product */}
         <StepSection number={2} title="Select Product">
           <ProductGrid selectedId={selectedProduct.id} onSelect={setSelectedProduct} />
         </StepSection>
 
-        {/* Step 3: Background */}
         <StepSection number={3} title="Scene Background (Optional)">
-           <div className="space-y-2">
-             <p className="text-xs text-slate-400 mb-2">Upload a specific environment or keep empty for default.</p>
-             {bgImage ? (
-                <div className="relative border border-slate-600 rounded-lg overflow-hidden group">
-                  <img src={bgImage} alt="Background" className="w-full h-24 object-cover" />
-                  <button 
-                    onClick={() => { clearBg(); if(bgInputRef.current) bgInputRef.current.value = ''; }}
-                    className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full hover:bg-red-500/80 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-             ) : (
-                <div 
-                  onClick={() => bgInputRef.current?.click()}
-                  className="border border-dashed border-slate-600 rounded-lg p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 hover:border-blue-400 transition-colors"
-                >
-                  <ImageIcon className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-400">Upload Scene Image</span>
-                </div>
-             )}
-             <input type="file" ref={bgInputRef} onChange={onBgChange} className="hidden" accept="image/*" />
-           </div>
+           <UploadArea 
+            image={bgImage}
+            onFileSelect={onBgSelect}
+            onClear={clearBg}
+            placeholder="Upload Background Scene"
+           />
+           <p className="text-xs text-slate-500 mt-2 px-1">
+             Upload a specific environment (e.g., table, street) or keep empty for a default studio background.
+           </p>
         </StepSection>
 
-        {/* Step 4: Style */}
         <StepSection number={4} title="Style Preference">
-           <Input
-             value={stylePreference}
-             onChange={(e) => setStylePreference(e.target.value)}
-             placeholder="E.g. minimalist, vintage, cyberpunk..."
-             className="mb-3"
-           />
-           <div className="flex flex-wrap gap-2">
-             {STYLE_PRESETS.map((style) => (
-               <button
-                 key={style}
-                 onClick={() => setStylePreference(style)}
-                 className="px-2.5 py-1 rounded-full bg-slate-700 text-xs text-slate-300 hover:bg-slate-600 hover:text-white transition-colors border border-slate-600"
-               >
-                 {style}
-               </button>
-             ))}
-           </div>
+           <StyleSelector value={stylePreference} onChange={setStylePreference} />
         </StepSection>
 
         {error && (
@@ -179,7 +118,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
         </Button>
       </div>
 
-      {/* Main Area: Preview */}
+      {/* Preview Area */}
       <div className="lg:col-span-8 bg-slate-900 rounded-2xl border border-slate-700 p-1 relative overflow-hidden flex flex-col min-h-[500px]">
           <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white flex items-center gap-2">
              <span>{selectedProduct.name} Preview</span>
@@ -200,7 +139,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
                      <AlertCircle className="w-12 h-12 text-red-400" />
                    </div>
                    <h2 className="text-xl font-bold text-red-400">Generation Failed</h2>
-                   <p className="text-slate-400 mt-2">The logo has been cleared. Please check the error message.</p>
+                   <p className="text-slate-400 mt-2">Please check the error details and try again.</p>
                 </div>
              ) : (
                 <div className="text-center opacity-30">

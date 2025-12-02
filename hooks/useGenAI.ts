@@ -1,17 +1,12 @@
+
 import { useState, useCallback } from 'react';
 import { generateOrEditImage } from '../services/gemini';
+import { AppError } from '../shared/utils/errors';
 
 interface UseGenAIResult {
   loading: boolean;
   error: string | null;
   resultImage: string | null;
-  /**
-   * Generates content.
-   * @param imageBase64 Main image.
-   * @param prompt Text prompt.
-   * @param additionalImages Optional secondary images.
-   * @returns Promise<boolean> indicating success.
-   */
   generate: (imageBase64: string, prompt: string, additionalImages?: string[]) => Promise<boolean>;
   clearError: () => void;
   reset: () => void;
@@ -45,27 +40,18 @@ export const useGenAI = (): UseGenAIResult => {
       setResultImage(result);
       return true;
     } catch (err: any) {
-      console.error("GenAI Error:", err);
-      let msg = "An unexpected error occurred.";
+      console.error("GenAI Hook caught error:", err);
       
-      if (err instanceof Error) {
-        msg = err.message;
-      } else if (typeof err === 'string') {
-        msg = err;
+      // Since the service now guarantees AppError types, we can safely use the message
+      // or fall back to a generic one if something completely unexpected happens.
+      if (err instanceof AppError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unexpected system error occurred.");
       }
 
-      // Categorize common API errors
-      if (msg.includes("403") || msg.toLowerCase().includes("api key")) {
-        msg = "Access denied. Please verify your API key configuration.";
-      } else if (msg.includes("429")) {
-        msg = "System is busy (Rate Limit). Please wait a moment before trying again.";
-      } else if (msg.toLowerCase().includes("safety")) {
-        msg = "The request was blocked by safety filters. Try adjusting your prompt or source image.";
-      } else if (msg.toLowerCase().includes("refused")) {
-        msg = "The model refused the request. Try a simpler prompt or a clearer source image.";
-      }
-
-      setError(msg);
       return false;
     } finally {
       setLoading(false);

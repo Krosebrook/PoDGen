@@ -35,6 +35,13 @@ export class ValidationError extends AppError {
   }
 }
 
+export class AuthenticationError extends AppError {
+  constructor(message: string = 'Authentication failed.') {
+    super(message, ErrorCode.AUTHENTICATION_ERROR, 401);
+    this.name = 'AuthenticationError';
+  }
+}
+
 export class RateLimitError extends AppError {
   constructor(retryAfter?: number) {
     super('Too many requests. Please try again later.', ErrorCode.RATE_LIMITED, 429, { retryAfter });
