@@ -198,7 +198,6 @@ async function postToDiscord(imageUrl) {
     template: ({ prompt, webhookUrl, mimeType }) => `const API_ENDPOINT = "${webhookUrl || 'https://api.yourdomain.com/v1/assets'}";
 
 async function sendToBackend(imageUrl) {
-  // Example: Sending the generated URL and metadata to your backend
   try {
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
@@ -228,7 +227,6 @@ async function sendToBackend(imageUrl) {
     icon: 'Code2',
     template: ({ mimeType }) => `import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-// Initialize S3 Client
 const s3 = new S3Client({ 
   region: process.env.AWS_REGION,
   credentials: {
