@@ -106,5 +106,40 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Vintage speckled finish',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Camp+Mug',
     defaultPrompt: 'A {style_preference} outdoor shot of a vintage speckled enamel mug resting on a wooden picnic table, with this logo featured on the front.'
+  },
+  {
+    id: 'bottle-matte',
+    name: 'Matte Water Bottle',
+    description: 'Insulated stainless steel',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Water+Bottle',
+    defaultPrompt: 'A {style_preference} studio shot of a sleek matte finish insulated water bottle standing on a gym bench, with this logo vertically aligned on the side.'
+  },
+  {
+    id: 'socks-crew',
+    name: 'Crew Socks',
+    description: 'Cotton athletic socks',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Socks',
+    defaultPrompt: 'A {style_preference} product photo of a pair of white athletic crew socks, with this logo embroidered on the ribbed cuff.'
+  },
+  {
+    id: 'notebook-hardcover',
+    name: 'Hardcover Notebook',
+    description: 'Premium Moleskine-style',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Notebook',
+    defaultPrompt: 'A {style_preference} angled shot of a black hardcover notebook closed on a wooden desk, with this logo embossed in gold foil on the cover.'
+  },
+  {
+    id: 'pillow-square',
+    name: 'Throw Pillow',
+    description: 'Soft interior decor',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Pillow',
+    defaultPrompt: 'A {style_preference} lifestyle shot of a square throw pillow on a modern gray sofa, featuring this logo printed as a pattern or central design.'
+  },
+  {
+    id: 'skateboard-deck',
+    name: 'Skateboard Deck',
+    description: 'Maple wood deck',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Skateboard',
+    defaultPrompt: 'A {style_preference} studio shot of the bottom of a maple skateboard deck, featuring this logo as the main graphic art across the wood grain.'
   }
 ];

@@ -1,10 +1,19 @@
 
-import React, { useState } from 'react';
-import { ImageEditor } from './features/editor/components/ImageEditor';
-import { MerchStudio } from './features/merch/components/MerchStudio';
-import { IntegrationCode } from './features/integrations/components/IntegrationCode';
+import React, { useState, Suspense } from 'react';
 import { AppMode } from './shared/types';
 import { Wand2, Shirt, Code, Zap } from 'lucide-react';
+import { Spinner } from './shared/components/ui/Spinner';
+
+// Lazy Load Features for Performance
+const ImageEditor = React.lazy(() => import('./features/editor/components/ImageEditor').then(module => ({ default: module.ImageEditor })));
+const MerchStudio = React.lazy(() => import('./features/merch/components/MerchStudio').then(module => ({ default: module.MerchStudio })));
+const IntegrationCode = React.lazy(() => import('./features/integrations/components/IntegrationCode').then(module => ({ default: module.IntegrationCode })));
+
+const LoadingScreen = () => (
+  <div className="h-full w-full flex items-center justify-center min-h-[400px]">
+    <Spinner className="w-8 h-8 text-blue-500" />
+  </div>
+);
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppMode>('EDITOR');
@@ -15,7 +24,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col font-sans">
       {/* Navbar */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -71,35 +80,37 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="h-[calc(100vh-8rem)]">
-          {activeTab === 'EDITOR' && (
-            <div className="h-full animate-fadeIn">
-               <div className="mb-6">
-                 <h1 className="text-2xl font-bold text-white mb-2">AI Image Editor</h1>
-                 <p className="text-slate-400">Upload an image and use natural language to transform it instantly.</p>
-               </div>
-               <div className="h-[calc(100%-5rem)]">
-                 <ImageEditor onImageGenerated={handleImageGenerated} />
-               </div>
-            </div>
-          )}
+          <Suspense fallback={<LoadingScreen />}>
+            {activeTab === 'EDITOR' && (
+              <div className="h-full animate-fadeIn">
+                 <div className="mb-6">
+                   <h1 className="text-2xl font-bold text-white mb-2">AI Image Editor</h1>
+                   <p className="text-slate-400">Upload an image and use natural language to transform it instantly.</p>
+                 </div>
+                 <div className="h-[calc(100%-5rem)]">
+                   <ImageEditor onImageGenerated={handleImageGenerated} />
+                 </div>
+              </div>
+            )}
 
-          {activeTab === 'MERCH' && (
-            <div className="h-full animate-fadeIn">
-               <div className="mb-6">
-                 <h1 className="text-2xl font-bold text-white mb-2">On-Demand Merch Generator</h1>
-                 <p className="text-slate-400">Visualize your brand on premium products in seconds.</p>
-               </div>
-               <div className="h-[calc(100%-5rem)]">
-                 <MerchStudio onImageGenerated={handleImageGenerated} />
-               </div>
-            </div>
-          )}
+            {activeTab === 'MERCH' && (
+              <div className="h-full animate-fadeIn">
+                 <div className="mb-6">
+                   <h1 className="text-2xl font-bold text-white mb-2">On-Demand Merch Generator</h1>
+                   <p className="text-slate-400">Visualize your brand on premium products in seconds.</p>
+                 </div>
+                 <div className="h-[calc(100%-5rem)]">
+                   <MerchStudio onImageGenerated={handleImageGenerated} />
+                 </div>
+              </div>
+            )}
 
-          {activeTab === 'INTEGRATIONS' && (
-            <div className="h-full animate-fadeIn">
-              <IntegrationCode lastPrompt={lastPrompt} />
-            </div>
-          )}
+            {activeTab === 'INTEGRATIONS' && (
+              <div className="h-full animate-fadeIn">
+                <IntegrationCode lastPrompt={lastPrompt} />
+              </div>
+            )}
+          </Suspense>
         </div>
       </main>
       

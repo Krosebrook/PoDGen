@@ -17,12 +17,22 @@ const downloadDataUrl = (dataUrl: string, filename: string) => {
 };
 
 /**
+ * Removes the Data URL prefix to get raw Base64 string.
+ */
+export const cleanBase64 = (b64: string): string => {
+  return b64.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, "");
+};
+
+/**
+ * Robustly detects mime type from base64 header.
+ */
+export const getMimeType = (b64: string): string => {
+  const match = b64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+  return match ? match[1] : 'image/png';
+};
+
+/**
  * Processes and saves an image in the specified format and scale.
- * 
- * @param imageUrl - The source URL (base64 or remote) of the image.
- * @param filename - The desired output filename (without extension).
- * @param format - The export format ('png', 'jpg', 'svg').
- * @param scale - The resolution scale factor (e.g., 1, 2).
  */
 export const saveImage = async (
   imageUrl: string,
@@ -56,7 +66,7 @@ export const saveImage = async (
     // Handle Raster Export (PNG/JPG)
     const img = new Image();
     img.src = imageUrl;
-    img.crossOrigin = "anonymous"; // Essential for canvas export if image is remote
+    img.crossOrigin = "anonymous"; 
 
     await new Promise((resolve, reject) => {
       img.onload = resolve;
@@ -73,13 +83,11 @@ export const saveImage = async (
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error("Could not get canvas context");
 
-    // Enable high-quality scaling
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, width, height);
 
     const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
-    // Use 0.95 quality for JPEG, ignored for PNG
     const dataUrl = canvas.toDataURL(mimeType, 0.95);
     
     downloadDataUrl(dataUrl, fullFilename);

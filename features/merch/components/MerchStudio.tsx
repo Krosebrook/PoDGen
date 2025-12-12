@@ -1,97 +1,45 @@
 
-import React from 'react';
-import { useMerchState } from '../hooks/useMerchState';
-import { useGenAI } from '@/shared/hooks/useGenAI';
-import { Alert, Button } from '@/shared/components/ui';
+import React, { Suspense } from 'react';
+import { useMerchController } from '../hooks/useMerchState';
+import { Alert, Button, Spinner } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
-import { ProductGrid } from './ProductGrid';
-import { UploadArea } from './UploadArea';
-import { StyleSelector } from './StyleSelector';
-import { MerchPreview } from './MerchPreview';
 import { Layers } from 'lucide-react';
+
+// Lazy load heavy components
+const ProductGrid = React.lazy(() => import('./ProductGrid').then(module => ({ default: module.ProductGrid })));
+const UploadArea = React.lazy(() => import('./UploadArea').then(module => ({ default: module.UploadArea })));
+const StyleSelector = React.lazy(() => import('./StyleSelector').then(module => ({ default: module.StyleSelector })));
+const MerchPreview = React.lazy(() => import('./MerchPreview').then(module => ({ default: module.MerchPreview })));
 
 interface MerchStudioProps {
   onImageGenerated: (url: string, prompt: string) => void;
 }
 
+const ControlFallback = () => (
+  <div className="flex justify-center items-center py-8">
+    <Spinner className="w-5 h-5 text-slate-500" />
+  </div>
+);
+
+const PreviewFallback = () => (
+  <div className="bg-slate-900 rounded-2xl border border-slate-700 h-[500px] flex items-center justify-center">
+    <div className="flex flex-col items-center gap-2">
+      <Spinner className="w-8 h-8 text-blue-500" />
+      <span className="text-slate-500 text-sm">Loading Studio...</span>
+    </div>
+  </div>
+);
+
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
-  const { 
+  const {
     logoImage, bgImage, selectedProduct, stylePreference,
-    setSelectedProduct, setStylePreference, handleLogoUpload, handleBgUpload,
-    clearLogo, clearBg, isUploadingLogo, isUploadingBg, validationError, clearValidationError
-  } = useMerchState();
-
-  const { loading, error, resultImage, generate, clearError, reset } = useGenAI();
-
-  // Combine validation errors and API errors
-  const activeError = validationError || error;
-  const clearActiveError = () => {
-    clearValidationError();
-    clearError();
-  };
-
-  const onLogoSelect = async (file: File) => {
-    reset(); 
-    clearActiveError();
-    try {
-      await handleLogoUpload(file);
-    } catch (err: any) {
-      // Error is handled in hook state
-    }
-  };
-
-  const onBgSelect = async (file: File) => {
-    clearActiveError();
-    try {
-      await handleBgUpload(file);
-    } catch (err: any) {
-      // Error is handled in hook state
-    }
-  };
-
-  const handleGenerate = async () => {
-    if (!logoImage) return;
-
-    const style = stylePreference.trim() || "professional high-quality";
-    let finalPrompt = selectedProduct.defaultPrompt.replace('{style_preference}', style);
-
-    const additionalImages: string[] = [];
-    
-    if (bgImage) {
-      finalPrompt = `Image 1 is a logo. Image 2 is a background scene. 
-      Generate a ${style} mockup of a ${selectedProduct.name} (${selectedProduct.description}) placed naturally in the environment of Image 2. 
-      Apply the logo from Image 1 onto the product realistically. 
-      Ensure lighting and perspective match the background scene.`;
-      additionalImages.push(bgImage);
-    }
-    
-    const success = await generate(logoImage, finalPrompt, additionalImages);
-
-    if (success && resultImage) {
-      onImageGenerated(resultImage, finalPrompt);
-    }
-  };
-
-  const getErrorSuggestion = (errorMsg: string): string => {
-    const msg = errorMsg.toLowerCase();
-    
-    if (msg.includes("blocked") || msg.includes("safety") || msg.includes("policy")) {
-        return "The AI flagged the content as unsafe. Try a logo with less sensitive visuals.";
-    }
-    if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota")) {
-        return "System is busy (Rate Limited). Please wait 30 seconds before retrying.";
-    }
-    if (msg.includes("400") || msg.includes("invalid") || msg.includes("bad request")) {
-        return "The image format might be unsupported. Try converting your logo to PNG or JPG.";
-    }
-    if (bgImage && (msg.includes("shape") || msg.includes("dimension") || msg.includes("compatibility"))) {
-        return "The custom background might be causing issues. Try removing it to use the default studio background.";
-    }
-    if (msg.includes("size") || msg.includes("large") || msg.includes("payload")) {
-        return "The uploaded image is too large. Please use an image under 5MB.";
-    }
-    return "Ensure your logo is high-contrast and clear. If using a custom background, ensure it's a standard image format.";
-  };
+    resultImage, loading, variations, isGeneratingVariations,
+    activeError, errorSuggestion,
+    isUploadingLogo, isUploadingBg,
+    setSelectedProduct, setStylePreference,
+    handleLogoUpload, handleBgUpload, handleGenerate, handleGenerateVariations,
+    clearLogo, clearBg, clearActiveError
+  } = useMerchController(onImageGenerated);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full">
@@ -99,34 +47,42 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
       <div className="lg:col-span-4 xl:col-span-3 flex flex-col space-y-6 overflow-y-auto pr-2 custom-scrollbar pb-20">
         
         <StepSection number={1} title="Upload Brand Asset">
-          <UploadArea 
-            image={logoImage} 
-            onFileSelect={onLogoSelect} 
-            placeholder="Upload Logo or Design"
-            onClear={logoImage ? clearLogo : undefined}
-            loading={isUploadingLogo}
-          />
+          <Suspense fallback={<ControlFallback />}>
+            <UploadArea 
+              image={logoImage} 
+              onFileSelect={(f) => handleLogoUpload(f)} 
+              placeholder="Upload Logo or Design"
+              onClear={logoImage ? clearLogo : undefined}
+              loading={isUploadingLogo}
+            />
+          </Suspense>
         </StepSection>
 
         <StepSection number={2} title="Select Product">
-          <ProductGrid selectedId={selectedProduct.id} onSelect={setSelectedProduct} />
+          <Suspense fallback={<ControlFallback />}>
+            <ProductGrid selectedId={selectedProduct.id} onSelect={setSelectedProduct} />
+          </Suspense>
         </StepSection>
 
         <StepSection number={3} title="Scene Background (Optional)">
-           <UploadArea 
-            image={bgImage}
-            onFileSelect={onBgSelect}
-            onClear={clearBg}
-            placeholder="Upload Background Scene"
-            loading={isUploadingBg}
-           />
+           <Suspense fallback={<ControlFallback />}>
+             <UploadArea 
+              image={bgImage}
+              onFileSelect={(f) => handleBgUpload(f)}
+              onClear={clearBg}
+              placeholder="Upload Background Scene"
+              loading={isUploadingBg}
+             />
+           </Suspense>
            <p className="text-xs text-slate-500 mt-2 px-1">
              Upload a specific environment (e.g., table, street) or keep empty for a default studio background.
            </p>
         </StepSection>
 
         <StepSection number={4} title="Style Preference">
-           <StyleSelector value={stylePreference} onChange={setStylePreference} />
+           <Suspense fallback={<ControlFallback />}>
+             <StyleSelector value={stylePreference} onChange={setStylePreference} />
+           </Suspense>
         </StepSection>
 
         {activeError && (
@@ -149,15 +105,20 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
       {/* Preview Area */}
       <div className="lg:col-span-8 xl:col-span-9">
-         <MerchPreview 
-            loading={loading}
-            resultImage={resultImage}
-            error={activeError}
-            errorSuggestion={activeError ? getErrorSuggestion(activeError) : null}
-            productName={selectedProduct.name}
-            stylePreference={stylePreference}
-            productId={selectedProduct.id}
-         />
+         <Suspense fallback={<PreviewFallback />}>
+           <MerchPreview 
+              loading={loading}
+              resultImage={resultImage}
+              variations={variations}
+              isGeneratingVariations={isGeneratingVariations}
+              onGenerateVariations={handleGenerateVariations}
+              error={activeError}
+              errorSuggestion={errorSuggestion}
+              productName={selectedProduct.name}
+              stylePreference={stylePreference}
+              productId={selectedProduct.id}
+           />
+         </Suspense>
       </div>
     </div>
   );
