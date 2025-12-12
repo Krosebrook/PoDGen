@@ -1,7 +1,7 @@
 
 import React, { Suspense } from 'react';
 import { useMerchController } from '../hooks/useMerchState';
-import { Alert, Button, Spinner } from '@/shared/components/ui';
+import { Alert, Button, Spinner, Tooltip } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
 import { Layers } from 'lucide-react';
 
@@ -40,6 +40,8 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
     handleLogoUpload, handleBgUpload, handleGenerate, handleGenerateVariations,
     clearLogo, clearBg, clearActiveError
   } = useMerchController(onImageGenerated);
+
+  const isGenerateDisabled = !logoImage || isUploadingLogo || isUploadingBg;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full">
@@ -81,7 +83,11 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
         <StepSection number={4} title="Style Preference">
            <Suspense fallback={<ControlFallback />}>
-             <StyleSelector value={stylePreference} onChange={setStylePreference} />
+             <StyleSelector 
+               value={stylePreference} 
+               onChange={setStylePreference} 
+               productName={selectedProduct.name}
+             />
            </Suspense>
         </StepSection>
 
@@ -90,17 +96,28 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
             <Alert message={activeError} onDismiss={clearActiveError} />
           </div>
         )}
-
-        <Button 
-          onClick={handleGenerate} 
-          loading={loading}
-          loadingText="Generating Mockup..."
-          disabled={!logoImage || isUploadingLogo || isUploadingBg}
-          icon={<Layers className="w-6 h-6" />}
-          className="w-full mt-2 py-4 text-lg"
+        
+        <Tooltip 
+          content={isGenerateDisabled ? "Upload a logo to start" : "Generate high-res mockup"}
+          side="top"
         >
-          Generate Mockup
-        </Button>
+          <div className="w-full"> {/* Wrapper needed because disabled buttons don't fire events in some browsers */}
+            <Button 
+              onClick={handleGenerate} 
+              loading={loading}
+              loadingText="Generating Mockup..."
+              disabled={isGenerateDisabled}
+              icon={<Layers className="w-6 h-6" />}
+              className={`w-full mt-2 py-4 text-lg transition-all duration-300 ${
+                isGenerateDisabled
+                  ? 'grayscale' 
+                  : 'shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] hover:-translate-y-0.5'
+              }`}
+            >
+              Generate Mockup
+            </Button>
+          </div>
+        </Tooltip>
       </div>
 
       {/* Preview Area */}
