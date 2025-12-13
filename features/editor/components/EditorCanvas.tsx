@@ -1,7 +1,8 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Spinner, Button, Tooltip } from '@/shared/components/ui';
 import { Image as ImageIcon, Download, AlertCircle, Wand2, ZoomIn, ZoomOut, Maximize, Move } from 'lucide-react';
+import { useCanvasTransform } from '../hooks/useCanvasTransform';
 
 interface EditorCanvasProps {
   loading: boolean;
@@ -11,61 +12,26 @@ interface EditorCanvasProps {
 }
 
 export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage, error, onRetry }) => {
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
+  const {
+    scale,
+    position,
+    isDragging,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    reset
+  } = useCanvasTransform();
 
   // Reset zoom when image changes
   useEffect(() => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  }, [resultImage]);
-
-  const handleZoomIn = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setScale(s => Math.min(s + 0.25, 5));
-  };
-
-  const handleZoomOut = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setScale(s => Math.max(s - 0.25, 0.25));
-  };
-
-  const handleReset = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!resultImage) return;
-    
-    // Zoom on wheel
-    const delta = -e.deltaY;
-    setScale(s => {
-        const newScale = s + (delta > 0 ? 0.1 : -0.1);
-        return Math.min(Math.max(newScale, 0.25), 5);
-    });
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!resultImage) return;
-    e.preventDefault();
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    setPosition({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
-    });
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
+    if (resultImage) {
+      reset();
+    }
+  }, [resultImage, reset]);
 
   return (
     <div className={`flex flex-col h-full bg-slate-900 rounded-2xl border overflow-hidden relative transition-colors ${error ? 'border-red-900/30' : 'border-slate-700'}`}>
@@ -92,11 +58,11 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage
          className={`flex-1 w-full h-full overflow-hidden bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-opacity-5 relative
             ${resultImage ? 'cursor-move' : ''}
          `}
-         onMouseDown={handleMouseDown}
-         onMouseMove={handleMouseMove}
-         onMouseUp={handleMouseUp}
-         onMouseLeave={handleMouseUp}
-         onWheel={handleWheel}
+         onMouseDown={resultImage ? handleMouseDown : undefined}
+         onMouseMove={resultImage ? handleMouseMove : undefined}
+         onMouseUp={resultImage ? handleMouseUp : undefined}
+         onMouseLeave={resultImage ? handleMouseUp : undefined}
+         onWheel={resultImage ? handleWheel : undefined}
        >
           <div className="w-full h-full flex items-center justify-center">
              {loading ? (

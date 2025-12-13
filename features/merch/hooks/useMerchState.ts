@@ -15,6 +15,8 @@ export interface TextOverlayState {
   x: number;
   y: number;
   align: 'left' | 'center' | 'right';
+  rotation: number;
+  opacity: number;
 }
 
 export const useMerchController = (onImageGenerated?: (url: string, prompt: string) => void) => {
@@ -32,7 +34,9 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     size: 40,
     x: 50, // Percent
     y: 50,  // Percent
-    align: 'center'
+    align: 'center',
+    rotation: 0,
+    opacity: 100
   });
   
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);

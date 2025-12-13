@@ -46,49 +46,53 @@ export const getVariationPrompts = (
 export const getErrorSuggestion = (errorMsg: string, hasBackground: boolean): string => {
   const msg = errorMsg.toLowerCase();
   
-  // 1. Safety & Policy (Blocked content)
+  // 1. Safety & Policy
   if (msg.includes("blocked") || msg.includes("safety") || msg.includes("policy") || msg.includes("harmful") || msg.includes("finish reason")) {
-      return "Content Safety: The AI detected sensitive content (e.g., generated people, restricted symbols). Try using a more abstract logo or a cleaner version without text/faces.";
+      return "Content Safety: The AI blocked generation. This often happens with realistic faces, public figures, restricted symbols, or copyrighted characters. Try a simpler, abstract logo.";
   }
 
-  // 2. Rate Limiting (429)
-  if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota") || msg.includes("exhausted")) {
-      return "High Traffic: The model is receiving too many requests. Please wait 60 seconds before clicking 'Generate' again.";
+  // 2. Rate Limiting
+  if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota") || msg.includes("too many requests")) {
+      return "High Traffic: You've reached the usage limit. Please wait 30-60 seconds before trying again.";
   }
 
-  // 3. Service Overload (503)
+  // 3. Service Overload
   if (msg.includes("503") || msg.includes("overloaded") || msg.includes("unavailable") || msg.includes("capacity")) {
-      return "Server Busy: Google's AI servers are temporarily overloaded. Try again in a few minutes.";
+      return "Server Busy: Google's AI model is momentarily overloaded. Please retry in 1-2 minutes.";
   }
 
-  // 4. Authentication / API Key (401/403)
-  if (msg.includes("401") || msg.includes("403") || msg.includes("api key") || msg.includes("unauthorized")) {
-      return "Configuration Error: API Key is missing or invalid. Please check your .env file and ensure 'API_KEY' is set correctly.";
+  // 4. Authentication
+  if (msg.includes("401") || msg.includes("403") || msg.includes("api key") || msg.includes("unauthorized") || msg.includes("access denied")) {
+      return "Auth Error: API Key is missing or invalid. Check your .env configuration.";
   }
 
-  // 5. Bad Request / Invalid Input (400)
-  if (msg.includes("400") || msg.includes("invalid") || msg.includes("bad request") || msg.includes("argument")) {
+  // 5. Bad Request / Input
+  if (msg.includes("400") || msg.includes("invalid") || msg.includes("bad request") || msg.includes("argument") || msg.includes("unsupported")) {
       if (hasBackground) {
-          return "Input Conflict: The custom background might be incompatible with the logo. Ensure both are standard PNG/JPG files.";
+          return "Input Conflict: The custom background or logo format is causing issues. Ensure both are standard RGB PNG/JPG files.";
       }
-      return "Format Issue: The logo file format might be corrupted or unsupported. Try converting it to a standard PNG or JPG.";
+      return "Image Format: The logo format might be unsupported or corrupted. Try converting to a standard PNG/JPG.";
   }
 
-  // 6. File Size / Payload Too Large (413)
-  if (msg.includes("size") || msg.includes("large") || msg.includes("payload") || msg.includes("too big") || msg.includes("413")) {
-      return "Size Limit: The uploaded image exceeds the limit. Please resize your logo to under 5MB or downscale to ~1024px.";
+  // 6. Size / Resolution
+  if (msg.includes("size") || msg.includes("large") || msg.includes("payload") || msg.includes("too big") || msg.includes("413") || msg.includes("resolution") || msg.includes("dimension")) {
+      return "Image Size: Image might be too large (>5MB) or have extreme dimensions. Resize to ~1024px for best results.";
   }
 
-  // 7. Resolution / Dimensions (Generic inference)
-  if (msg.includes("resolution") || msg.includes("dimension") || msg.includes("pixel")) {
-      return "Resolution Warning: Use images between 512x512 and 2048x2048 pixels for best results. Extremely high or low resolutions can fail.";
+  // 7. Timeout
+  if (msg.includes("timeout") || msg.includes("abort") || msg.includes("cancelled")) {
+      return "Timeout: The generation took too long. Check your connection or try a simpler prompt.";
   }
 
   // 8. Custom Background Specifics
   if (hasBackground && (msg.includes("shape") || msg.includes("mask") || msg.includes("channel"))) {
-      return "Background Mismatch: The custom background scene is causing processing errors. Try removing it to use the default AI studio environment.";
+      return "Incompatible Background: The background image has unusual properties (e.g., CMYK, Alpha channels). Try a standard RGB image.";
+  }
+  
+  // 9. Generic 500
+  if (msg.includes("500") || msg.includes("internal") || msg.includes("server error")) {
+     return "AI Service Error: Unexpected model error. Retrying often fixes this.";
   }
 
-  // Default fallback
-  return "General Tip: Ensure your logo is a high-contrast PNG with transparency for the best results. If the issue persists, refresh the page.";
+  return "Tip: Ensure your logo is a clear, high-contrast PNG. If the issue persists, refresh the page.";
 };

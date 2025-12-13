@@ -136,16 +136,18 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
               {textOverlay && textOverlay.text && (
                  <div
                    onMouseDown={handleTextDragStart}
-                   className={`absolute cursor-move select-none whitespace-nowrap z-20 ${isDraggingText ? 'opacity-80' : 'opacity-100'}`}
+                   className={`absolute cursor-move select-none whitespace-pre-wrap z-20 ${isDraggingText ? 'opacity-80' : ''}`}
                    style={{
                      left: `${textOverlay.x}%`,
                      top: `${textOverlay.y}%`,
-                     transform: getTransform(textOverlay.align),
+                     transform: `${getTransform(textOverlay.align)} rotate(${textOverlay.rotation || 0}deg)`,
                      fontFamily: textOverlay.font,
                      fontSize: `${textOverlay.size}px`,
                      color: textOverlay.color,
                      textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                     textAlign: textOverlay.align
+                     textAlign: textOverlay.align,
+                     opacity: (textOverlay.opacity !== undefined ? textOverlay.opacity : 100) / 100,
+                     lineHeight: '1.2'
                    }}
                  >
                    {textOverlay.text}

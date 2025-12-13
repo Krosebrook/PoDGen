@@ -1,8 +1,7 @@
 
 import React from 'react';
-import { Input } from '@/shared/components/ui/Input';
 import { Tooltip } from '@/shared/components/ui';
-import { Type, Move, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Type, Move, AlignLeft, AlignCenter, AlignRight, RotateCw, Droplets } from 'lucide-react';
 import { TextOverlayState } from '../hooks/useMerchState';
 
 interface TextOverlayControlsProps {
@@ -29,11 +28,12 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
       <div>
         <Tooltip content="Enter text to burn onto the mockup">
             <div>
-                <Input
-                placeholder="Add text overlay..."
-                value={overlay.text}
-                onChange={(e) => handleChange('text', e.target.value)}
-                className="mb-2"
+                <textarea
+                  placeholder="Add text overlay..."
+                  value={overlay.text}
+                  onChange={(e) => handleChange('text', e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-y min-h-[80px] text-sm"
+                  rows={3}
                 />
             </div>
         </Tooltip>
@@ -99,20 +99,53 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
         </div>
       </div>
 
-      <Tooltip content="Adjust text size">
-        <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg p-3 cursor-ew-resize">
-            <Type className="w-4 h-4 text-slate-500" />
-            <input 
-            type="range" 
-            min="10" 
-            max="200" 
-            value={overlay.size} 
-            onChange={(e) => handleChange('size', parseInt(e.target.value))}
-            className="flex-1 accent-blue-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-            />
-            <span className="text-xs text-slate-400 w-6 text-right">{overlay.size}</span>
-        </div>
-      </Tooltip>
+      {/* Sliders Grid */}
+      <div className="space-y-3 pt-1">
+        <Tooltip content="Adjust text size">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg p-2.5 cursor-ew-resize">
+                <Type className="w-4 h-4 text-slate-500" />
+                <input 
+                type="range" 
+                min="10" 
+                max="200" 
+                value={overlay.size} 
+                onChange={(e) => handleChange('size', parseInt(e.target.value))}
+                className="flex-1 accent-blue-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs text-slate-400 w-8 text-right">{overlay.size}</span>
+            </div>
+        </Tooltip>
+
+        <Tooltip content="Rotate text">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg p-2.5 cursor-ew-resize">
+                <RotateCw className="w-4 h-4 text-slate-500" />
+                <input 
+                type="range" 
+                min="-180" 
+                max="180" 
+                value={overlay.rotation || 0} 
+                onChange={(e) => handleChange('rotation', parseInt(e.target.value))}
+                className="flex-1 accent-blue-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs text-slate-400 w-8 text-right">{overlay.rotation || 0}°</span>
+            </div>
+        </Tooltip>
+
+        <Tooltip content="Adjust opacity">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-lg p-2.5 cursor-ew-resize">
+                <Droplets className="w-4 h-4 text-slate-500" />
+                <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={overlay.opacity === undefined ? 100 : overlay.opacity} 
+                onChange={(e) => handleChange('opacity', parseInt(e.target.value))}
+                className="flex-1 accent-blue-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs text-slate-400 w-8 text-right">{overlay.opacity === undefined ? 100 : overlay.opacity}%</span>
+            </div>
+        </Tooltip>
+      </div>
       
       {overlay.text && (
         <div className="text-[10px] text-slate-500 flex items-center gap-1.5 justify-center bg-slate-800/50 py-1 rounded">

@@ -3,7 +3,7 @@ import React, { Suspense } from 'react';
 import { useMerchController } from '../hooks/useMerchState';
 import { Alert, Button, Spinner, Tooltip } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
-import { Layers, Sparkles } from 'lucide-react';
+import { Layers, Sparkles, Lightbulb } from 'lucide-react';
 
 // Lazy load heavy components
 const ProductGrid = React.lazy(() => import('./ProductGrid').then(module => ({ default: module.ProductGrid })));
@@ -106,6 +106,12 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
         {activeError && (
           <div className="animate-fadeIn">
             <Alert message={activeError} onDismiss={clearActiveError} />
+            {errorSuggestion && (
+              <div className="mt-2 text-xs text-blue-200/90 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20 flex gap-2 items-start">
+                <Lightbulb className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <span>{errorSuggestion}</span>
+              </div>
+            )}
           </div>
         )}
         
