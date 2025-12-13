@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { MerchProduct } from '../types';
 import { MERCH_PRODUCTS } from '../data/products';
 import { readImageFile } from '@/shared/utils/file';
@@ -42,6 +42,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   // Variations State
   const [variations, setVariations] = useState<string[]>([]);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+  const variationsAbortController = useRef<AbortController | null>(null);
 
   // Composition: Use GenAI hook for main generation
   const { loading, error: apiError, resultImage, generate, clearError, reset: resetGenAI } = useGenAI();
@@ -50,12 +51,21 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   const activeError = validationError || apiError;
   const errorSuggestion = activeError ? getErrorSuggestion(activeError, !!bgImage) : null;
 
+  // Cleanup variations on unmount
+  useEffect(() => {
+    return () => {
+      if (variationsAbortController.current) {
+        variationsAbortController.current.abort();
+      }
+    };
+  }, []);
+
   // Actions
   const handleLogoUpload = useCallback(async (file: File) => {
     setIsUploadingLogo(true);
     setValidationError(null);
     resetGenAI();
-    setVariations([]); // Reset variations on new logo
+    setVariations([]); 
     try {
       const base64 = await readImageFile(file);
       setLogoImage(base64);
@@ -70,7 +80,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   const handleBgUpload = useCallback(async (file: File) => {
     setIsUploadingBg(true);
     setValidationError(null);
-    setVariations([]); // Reset variations on new bg
+    setVariations([]); 
     try {
       const base64 = await readImageFile(file);
       setBgImage(base64);
@@ -108,6 +118,13 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   const handleGenerateVariations = useCallback(async () => {
     if (!logoImage) return;
 
+    // Abort previous variation generation
+    if (variationsAbortController.current) {
+      variationsAbortController.current.abort();
+    }
+    const controller = new AbortController();
+    variationsAbortController.current = controller;
+
     setIsGeneratingVariations(true);
     setValidationError(null);
 
@@ -115,23 +132,35 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
       const prompts = getVariationPrompts(selectedProduct, stylePreference, !!bgImage);
       const additionalImages: string[] = bgImage ? [bgImage] : [];
       
-      const results = await generateImageBatch(logoImage, prompts, additionalImages);
+      const results = await generateImageBatch(
+        logoImage, 
+        prompts, 
+        additionalImages,
+        { signal: controller.signal }
+      );
       
-      if (results.length === 0) {
-        setValidationError("Failed to generate variations. The model might be busy.");
-      } else {
-        setVariations(results);
+      if (!controller.signal.aborted) {
+        if (results.length === 0) {
+          setValidationError("Failed to generate variations. The model might be busy.");
+        } else {
+          setVariations(results);
+        }
       }
     } catch (err: any) {
-      console.error("Variation generation error:", err);
-      setValidationError(err.message || "Failed to generate variations");
+      if (err.name !== 'AbortError' && err.message !== 'Request aborted') {
+        console.error("Variation generation error:", err);
+        setValidationError(err.message || "Failed to generate variations");
+      }
     } finally {
-      setIsGeneratingVariations(false);
+      if (!controller.signal.aborted) {
+        setIsGeneratingVariations(false);
+        variationsAbortController.current = null;
+      }
     }
   }, [logoImage, bgImage, selectedProduct, stylePreference]);
 
   // Trigger callback when result changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (resultImage && onImageGenerated && !loading) {
        const prompt = constructMerchPrompt(selectedProduct, stylePreference, !!bgImage);
        onImageGenerated(resultImage, prompt);
@@ -157,7 +186,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     // Setters
     setSelectedProduct,
     setStylePreference,
-    setVariations, // Exposed to allow selecting a variation as main
+    setVariations, 
     setTextOverlay,
     
     // Handlers

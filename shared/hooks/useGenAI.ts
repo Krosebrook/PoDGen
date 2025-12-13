@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { generateOrEditImage } from '../../services/gemini';
 import { AppError } from '../utils/errors';
 
@@ -16,13 +16,28 @@ export const useGenAI = (): UseGenAIResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
   
   const reset = useCallback(() => {
+    // Abort any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setLoading(false);
     setError(null);
     setResultImage(null);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const generate = useCallback(async (
@@ -32,15 +47,35 @@ export const useGenAI = (): UseGenAIResult => {
   ): Promise<boolean> => {
     if (!imageBase64 || !prompt) return false;
 
+    // Abort previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
     setResultImage(null);
 
     try {
-      const result = await generateOrEditImage(imageBase64, prompt, additionalImages);
-      setResultImage(result);
-      return true;
+      const result = await generateOrEditImage(imageBase64, prompt, additionalImages, { 
+        signal: controller.signal 
+      });
+      
+      if (!controller.signal.aborted) {
+        setResultImage(result);
+        return true;
+      }
+      return false;
     } catch (err: unknown) {
+      // Ignore abort errors
+      if (err instanceof Error && (err.name === 'AbortError' || err.message === 'Request aborted')) {
+        return false;
+      }
+
       console.error("GenAI Hook caught error:", err);
       
       let msg = "An unexpected error occurred.";
@@ -50,10 +85,15 @@ export const useGenAI = (): UseGenAIResult => {
         msg = err.message;
       }
 
-      setError(msg);
+      if (!controller.signal.aborted) {
+        setError(msg);
+      }
       return false;
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   }, []);
 

@@ -3,12 +3,18 @@ import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
 import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
 
+interface RequestOptions {
+  signal?: AbortSignal;
+  timeout?: number;
+}
+
 class GeminiService {
   private static instance: GeminiService;
   private client: GoogleGenAI | null = null;
   private readonly MODEL_NAME = "gemini-2.5-flash-image";
   private readonly MAX_RETRIES = 3;
   private readonly BASE_DELAY = 1000;
+  private readonly DEFAULT_TIMEOUT = 60000; // 60 seconds
 
   private constructor() {}
 
@@ -35,6 +41,10 @@ class GeminiService {
 
     const msg = error.message || String(error);
     const status = error.status || error.response?.status;
+
+    if (error.name === 'AbortError' || msg.includes('aborted')) {
+      return new ApiError("Request cancelled by user.", 499);
+    }
 
     if (status === 429 || msg.includes("429")) {
       return new RateLimitError();
@@ -69,6 +79,15 @@ class GeminiService {
     } catch (error: any) {
       const mappedError = this.mapError(error);
       
+      // Don't retry if aborted or safety error or auth error
+      if (
+        mappedError instanceof AuthenticationError ||
+        mappedError instanceof SafetyError || 
+        (mappedError instanceof ApiError && mappedError.statusCode === 499)
+      ) {
+        throw mappedError;
+      }
+
       // Retry on Rate Limit (429) or Service Unavailable (503)
       if (retries > 0 && (mappedError instanceof RateLimitError || (mappedError instanceof ApiError && mappedError.statusCode === 503))) {
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -82,9 +101,17 @@ class GeminiService {
   public async generateOrEditImage(
     mainImageBase64: string,
     prompt: string,
-    additionalImagesBase64: string[] = []
+    additionalImagesBase64: string[] = [],
+    options: RequestOptions = {}
   ): Promise<string> {
+    const { signal, timeout = this.DEFAULT_TIMEOUT } = options;
+
     return this.withRetry(async () => {
+      // Check abort signal before starting
+      if (signal?.aborted) {
+        throw new Error("Request aborted");
+      }
+
       const ai = this.getClient();
       const parts: Part[] = [];
 
@@ -109,12 +136,28 @@ class GeminiService {
       // 3. Add Prompt
       parts.push({ text: prompt });
 
-      const response: GenerateContentResponse = await ai.models.generateContent({
+      // Create a timeout race
+      const generatePromise = ai.models.generateContent({
         model: this.MODEL_NAME,
-        contents: {
-          parts: parts,
-        },
+        contents: { parts },
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error("Request timed out")), timeout)
+      );
+
+      // Handle AbortSignal during fetch (if SDK supports it, otherwise we simulate)
+      const abortPromise = new Promise<never>((_, reject) => {
+        if (signal) {
+          signal.addEventListener('abort', () => reject(new Error("Request aborted")));
+        }
+      });
+
+      const response: GenerateContentResponse = await Promise.race([
+        generatePromise,
+        timeoutPromise,
+        abortPromise
+      ]);
 
       // Parse the response
       if (response.candidates && response.candidates.length > 0) {
@@ -140,13 +183,12 @@ class GeminiService {
   public async generateImageBatch(
     mainImageBase64: string,
     prompts: string[],
-    additionalImagesBase64: string[] = []
+    additionalImagesBase64: string[] = [],
+    options: RequestOptions = {}
   ): Promise<string[]> {
-    // Execute all requests in parallel but with individual error handling
-    // We do NOT retry the whole batch if one fails, to keep it snappy. 
-    // The retry logic inside generateOrEditImage handles individual resilience.
+    // Execute all requests in parallel
     const promises = prompts.map(prompt => 
-      this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64)
+      this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64, options)
         .catch(err => {
           console.warn(`Variation failed for prompt "${prompt}":`, err);
           return null; 
@@ -161,11 +203,13 @@ class GeminiService {
 export const generateOrEditImage = (
   mainImageBase64: string,
   prompt: string,
-  additionalImagesBase64: string[] = []
-) => GeminiService.getInstance().generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64);
+  additionalImagesBase64: string[] = [],
+  options?: RequestOptions
+) => GeminiService.getInstance().generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64, options);
 
 export const generateImageBatch = (
   mainImageBase64: string,
   prompts: string[],
-  additionalImagesBase64: string[] = []
-) => GeminiService.getInstance().generateImageBatch(mainImageBase64, prompts, additionalImagesBase64);
+  additionalImagesBase64: string[] = [],
+  options?: RequestOptions
+) => GeminiService.getInstance().generateImageBatch(mainImageBase64, prompts, additionalImagesBase64, options);

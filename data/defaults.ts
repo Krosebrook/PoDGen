@@ -1,5 +1,2 @@
-
-// This file is deprecated.
-// Merch Products -> features/merch/data/products.ts
-// Integration Platforms -> features/integrations/data/platforms.ts
+// This file has been deprecated. Data is now located in feature-specific directories.
 export {};

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
@@ -19,6 +20,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
 
   const handleMouseEnter = () => {
@@ -33,17 +35,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setIsVisible(false);
   };
 
-  useEffect(() => {
-    if (isVisible && triggerRef.current) {
+  // Update position logic
+  const updatePosition = () => {
+    if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const scrollY = window.scrollY;
       const scrollX = window.scrollX;
-      const gap = 8; // Space between element and tooltip
+      const gap = 8; 
 
       let top = 0;
       let left = 0;
 
-      // Calculate absolute position including scroll offsets
+      // Basic positioning
       switch (side) {
         case 'top':
           top = rect.top + scrollY - gap;
@@ -65,9 +68,22 @@ export const Tooltip: React.FC<TooltipProps> = ({
       
       setCoords({ top, left });
     }
+  };
+
+  useLayoutEffect(() => {
+    if (isVisible) {
+      updatePosition();
+      // Add listeners for scroll/resize to keep tooltip attached
+      window.addEventListener('scroll', updatePosition);
+      window.addEventListener('resize', updatePosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [isVisible, side]);
 
-  // Transform classes for centering the tooltip relative to the coordinate
+  // Transform classes for centering
   const transformClass = {
     top: '-translate-x-1/2 -translate-y-full',
     bottom: '-translate-x-1/2',
@@ -82,11 +98,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
         className={className}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onFocus={handleMouseEnter}
+        onBlur={handleMouseLeave}
+        role="tooltip"
+        aria-hidden={!isVisible}
       >
         {children}
       </div>
       {isVisible && createPortal(
         <div 
+          ref={tooltipRef}
           style={{ 
             top: coords.top, 
             left: coords.left,
@@ -95,7 +116,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           className={`z-[9999] px-2.5 py-1.5 text-xs font-medium text-slate-100 bg-slate-900 border border-slate-700 rounded-md shadow-xl pointer-events-none animate-fadeIn whitespace-nowrap ${transformClass[side]}`}
         >
           {content}
-          {/* Arrow */}
+          {/* Simple CSS Arrow */}
           <div className={`absolute w-2 h-2 bg-slate-900 border-slate-700 rotate-45 transform
             ${side === 'top' ? 'border-r border-b bottom-[-5px] left-1/2 -translate-x-1/2' : ''}
             ${side === 'bottom' ? 'border-l border-t top-[-5px] left-1/2 -translate-x-1/2' : ''}

@@ -1,5 +1,2 @@
-
-// This file is deprecated.
-// Global types -> shared/types/index.ts
-// Feature types -> features/*/types.ts
+// This file has been deprecated and its types moved to feature-specific modules.
 export {};

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Input } from '@/shared/components/ui/Input';
 import { Sparkles } from 'lucide-react';
 import { Tooltip } from '@/shared/components/ui';
@@ -10,20 +10,40 @@ interface StyleSelectorProps {
   productName: string;
 }
 
-const STYLE_PRESETS = [
-  'Photorealistic',
-  'Vector Art',
-  'Vintage Poster',
-  'Minimalist',
-  'Cyberpunk',
-  'Pastel',
-  'Watercolor',
-  'Grunge',
-  'Isometric 3D',
-  'Pop Art',
-  'Line Art',
-  'Y2K Aesthetic'
-];
+const getPresets = (productName: string): string[] => {
+  const p = productName.toLowerCase();
+  
+  // Base styles that are versatile
+  const base = ['Photorealistic', 'Studio Lighting'];
+
+  // Tech Accessories (Phone cases, laptop sleeves, etc)
+  if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('mouse') || p.includes('tech')) {
+    return [...base, 'Tech Gadget Aesthetic', 'Isometric 3D', 'Cyberpunk Neon', 'Holographic', 'Matte Black', 'Gaming Setup', 'Vaporwave'];
+  }
+
+  // Drinkware (Mugs, bottles, tumblers)
+  if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
+    return [...base, 'Cozy Morning Vibe', 'Artisan Ceramic', 'Outdoor Adventure', 'Cafe Atmosphere', 'Soft Bokeh', 'Rustic Wood'];
+  }
+
+  // Apparel (T-Shirts, Hoodies, Hats)
+  if (p.includes('shirt') || p.includes('hoodie') || p.includes('cap') || p.includes('hat') || p.includes('beanie') || p.includes('sock') || p.includes('apron')) {
+    return [...base, 'Urban Streetwear', 'Vintage 90s', 'Y2K Fashion', 'High Fashion', 'Eco Organic', 'Flat Lay', 'Grunge'];
+  }
+
+  // Decor & Print (Posters, Canvas, Pillows)
+  if (p.includes('poster') || p.includes('canvas') || p.includes('pillow') || p.includes('wall') || p.includes('notebook') || p.includes('tote')) {
+    return [...base, 'Interior Design', 'Bohemian Chic', 'Industrial Loft', 'Scandinavian', 'Mid-Century Modern', 'Gallery Wall', 'Vector Art'];
+  }
+
+  // Stickers & Small Items
+  if (p.includes('sticker') || p.includes('pin') || p.includes('keychain') || p.includes('magnet')) {
+    return [...base, 'Die-Cut Vinyl', 'Holographic', 'Macro Photography', 'Pop Art', 'Paper Texture', 'Sketchbook'];
+  }
+
+  // Default Fallback
+  return [...base, 'Cinematic', 'Vector Art', 'Vintage', 'Minimalist', '3D Render', 'Line Art', 'Pastel'];
+};
 
 const getProductSuggestions = (productName: string): string[] => {
   const p = productName.toLowerCase();
@@ -46,7 +66,9 @@ const getProductSuggestions = (productName: string): string[] => {
       "Y2K futuristic fashion style with chrome accents, liquid shapes, and neon lighting",
       "Eco-friendly organic branding with botanical shadows, earth tones, and natural linen textures",
       "Dark academia aesthetic with rich mahogany tones, moody lighting, and classical composition",
-      "Cyberpunk fashion photography with neon rain-slicked streets and holographic overlays"
+      "Cyberpunk fashion photography with neon rain-slicked streets and holographic overlays",
+      "High-fashion editorial look with dramatic posing and clean studio background",
+      "Retro thrift store aesthetic with warm film grain and nostalgic atmosphere"
     ];
   }
 
@@ -58,7 +80,9 @@ const getProductSuggestions = (productName: string): string[] => {
       "Sleek modern workspace aesthetic with soft focus background and clean white desk",
       "Outdoor adventure lifestyle shot with forest bokeh, natural lighting, and morning mist",
       "Artisan ceramic studio style with clay textures, pottery tools, and soft northern light",
-      "Matte tactical gear look with rugged textures, dark mood, and sharp rim lighting"
+      "Matte tactical gear look with rugged textures, dark mood, and sharp rim lighting",
+      "Summer picnic vibe with bright natural light, fresh fruits, and grassy background",
+      "Dark moody cafe setting with steam, coffee beans, and ambient warm lighting"
     ];
   }
 
@@ -70,7 +94,9 @@ const getProductSuggestions = (productName: string): string[] => {
       "Tech-reviewer studio aesthetic with RGB backlighting and crisp depth of field",
       "Vaporwave aesthetic with purple grid background, glitch effects, and retro computer graphics",
       "Isometric 3D render with clay-morphism texture, soft shadows, and vibrant plastic colors",
-      "Hand-drawn sketchbook style with pencil hatching, rough edges, and paper texture background"
+      "Hand-drawn sketchbook style with pencil hatching, rough edges, and paper texture background",
+      "Clean Apple-style product photography with pure white background and soft reflections",
+      "Gaming setup aesthetic with neon purple and blue lighting and mechanical keyboard background"
     ];
   }
 
@@ -82,11 +108,15 @@ const getProductSuggestions = (productName: string): string[] => {
     "Industrial loft style with exposed brick, metal textures, and cool tone lighting",
     "Vintage travel poster style with flat vector colors and distressed paper texture",
     "Psychedelic 60s rock poster style with swirling patterns, liquid typography, and vibrant clashing colors",
-    "Urban skate culture style with fisheye lens perspective and gritty concrete textures"
+    "Urban skate culture style with fisheye lens perspective and gritty concrete textures",
+    "Minimalist Japanese zen interior with tatami mats, bonsai, and balanced composition",
+    "Bright and airy Scandi living room with white walls, light wood, and natural light"
   ];
 };
 
 export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, productName }) => {
+  const presets = useMemo(() => getPresets(productName), [productName]);
+
   const handleSuggest = () => {
     const suggestions = getProductSuggestions(productName);
     const random = suggestions[Math.floor(Math.random() * suggestions.length)];
@@ -119,7 +149,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
         </Tooltip>
       </div>
       <div className="flex flex-wrap gap-2">
-        {STYLE_PRESETS.map((style) => (
+        {presets.map((style) => (
           <Tooltip key={style} content={`Apply ${style} style`}>
             <button
               onClick={() => onChange(style)}

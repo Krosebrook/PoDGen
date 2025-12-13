@@ -46,20 +46,49 @@ export const getVariationPrompts = (
 export const getErrorSuggestion = (errorMsg: string, hasBackground: boolean): string => {
   const msg = errorMsg.toLowerCase();
   
-  if (msg.includes("blocked") || msg.includes("safety") || msg.includes("policy")) {
-      return "The AI flagged the content as unsafe. Try a logo with less sensitive visuals.";
+  // 1. Safety & Policy (Blocked content)
+  if (msg.includes("blocked") || msg.includes("safety") || msg.includes("policy") || msg.includes("harmful") || msg.includes("finish reason")) {
+      return "Content Safety: The AI detected sensitive content (e.g., generated people, restricted symbols). Try using a more abstract logo or a cleaner version without text/faces.";
   }
-  if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota")) {
-      return "System is busy (Rate Limited). Please wait 30 seconds before retrying.";
+
+  // 2. Rate Limiting (429)
+  if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota") || msg.includes("exhausted")) {
+      return "High Traffic: The model is receiving too many requests. Please wait 60 seconds before clicking 'Generate' again.";
   }
-  if (msg.includes("400") || msg.includes("invalid") || msg.includes("bad request")) {
-      return "The image format might be unsupported. Try converting your logo to PNG or JPG.";
+
+  // 3. Service Overload (503)
+  if (msg.includes("503") || msg.includes("overloaded") || msg.includes("unavailable") || msg.includes("capacity")) {
+      return "Server Busy: Google's AI servers are temporarily overloaded. Try again in a few minutes.";
   }
-  if (hasBackground && (msg.includes("shape") || msg.includes("dimension") || msg.includes("compatibility"))) {
-      return "The custom background might be causing issues. Try removing it to use the default studio background.";
+
+  // 4. Authentication / API Key (401/403)
+  if (msg.includes("401") || msg.includes("403") || msg.includes("api key") || msg.includes("unauthorized")) {
+      return "Configuration Error: API Key is missing or invalid. Please check your .env file and ensure 'API_KEY' is set correctly.";
   }
-  if (msg.includes("size") || msg.includes("large") || msg.includes("payload")) {
-      return "The uploaded image is too large. Please use an image under 5MB.";
+
+  // 5. Bad Request / Invalid Input (400)
+  if (msg.includes("400") || msg.includes("invalid") || msg.includes("bad request") || msg.includes("argument")) {
+      if (hasBackground) {
+          return "Input Conflict: The custom background might be incompatible with the logo. Ensure both are standard PNG/JPG files.";
+      }
+      return "Format Issue: The logo file format might be corrupted or unsupported. Try converting it to a standard PNG or JPG.";
   }
-  return "Ensure your logo is high-contrast and clear. If using a custom background, ensure it's a standard image format.";
+
+  // 6. File Size / Payload Too Large (413)
+  if (msg.includes("size") || msg.includes("large") || msg.includes("payload") || msg.includes("too big") || msg.includes("413")) {
+      return "Size Limit: The uploaded image exceeds the limit. Please resize your logo to under 5MB or downscale to ~1024px.";
+  }
+
+  // 7. Resolution / Dimensions (Generic inference)
+  if (msg.includes("resolution") || msg.includes("dimension") || msg.includes("pixel")) {
+      return "Resolution Warning: Use images between 512x512 and 2048x2048 pixels for best results. Extremely high or low resolutions can fail.";
+  }
+
+  // 8. Custom Background Specifics
+  if (hasBackground && (msg.includes("shape") || msg.includes("mask") || msg.includes("channel"))) {
+      return "Background Mismatch: The custom background scene is causing processing errors. Try removing it to use the default AI studio environment.";
+  }
+
+  // Default fallback
+  return "General Tip: Ensure your logo is a high-contrast PNG with transparency for the best results. If the issue persists, refresh the page.";
 };

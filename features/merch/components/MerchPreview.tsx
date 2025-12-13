@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Spinner, Button, Tooltip } from '@/shared/components/ui';
 import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
@@ -41,6 +41,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDraggingText, setIsDraggingText] = useState(false);
+  const rafRef = useRef<number | null>(null);
 
   // Determine which image to show prominently (viewImage override, or resultImage)
   const activeImage = viewImage || resultImage;
@@ -63,22 +64,37 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     setIsDraggingText(true);
   };
 
-  const handleTextDragMove = (e: React.MouseEvent) => {
+  const handleTextDragMove = useCallback((e: React.MouseEvent) => {
     if (!isDraggingText || !containerRef.current || !onTextOverlayChange || !textOverlay) return;
     
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    onTextOverlayChange({
-      ...textOverlay,
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y))
+    // Throttle via RAF
+    if (rafRef.current) return;
+
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    rafRef.current = requestAnimationFrame(() => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = ((clientX - rect.left) / rect.width) * 100;
+        const y = ((clientY - rect.top) / rect.height) * 100;
+        
+        onTextOverlayChange({
+          ...textOverlay,
+          x: Math.max(0, Math.min(100, x)),
+          y: Math.max(0, Math.min(100, y))
+        });
+      }
+      rafRef.current = null;
     });
-  };
+  }, [isDraggingText, onTextOverlayChange, textOverlay]);
 
   const handleTextDragEnd = () => {
     setIsDraggingText(false);
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
   };
 
   const getTransform = (align: string = 'center') => {

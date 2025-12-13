@@ -141,5 +141,75 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Maple wood deck',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Skateboard',
     defaultPrompt: 'A {style_preference} studio shot of the bottom of a maple skateboard deck, featuring this logo as the main graphic art across the wood grain.'
+  },
+  {
+    id: 'poster-framed',
+    name: 'Framed Poster',
+    description: 'Modern framed wall art',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
+    defaultPrompt: 'A {style_preference} interior design shot of a framed poster hanging on a white wall in a modern living room, featuring this logo art as the central print.'
+  },
+  {
+    id: 'mousepad-gaming',
+    name: 'Gaming Desk Mat',
+    description: 'Large extended mousepad',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Desk+Mat',
+    defaultPrompt: 'A {style_preference} workspace setup photo showing a large extended gaming mousepad on a desk with a keyboard and mouse, featuring this logo design printed across the surface.'
+  },
+  {
+    id: 'keychain-metal',
+    name: 'Metal Keychain',
+    description: 'Premium enamel keychain',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Keychain',
+    defaultPrompt: 'A {style_preference} macro photography shot of a metal enamel keychain lying on a textured surface, shaped like this logo with high-quality metal finish.'
+  },
+  {
+    id: 'yoga-mat',
+    name: 'Yoga Mat',
+    description: 'Eco-friendly fitness mat',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Yoga+Mat',
+    defaultPrompt: 'A {style_preference} lifestyle shot of a rolled-out yoga mat in a bright fitness studio, with this logo printed large on the center of the mat.'
+  },
+  {
+    id: 'enamel-pin',
+    name: 'Enamel Pin',
+    description: 'Die-struck lapel pin',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Pin',
+    defaultPrompt: 'A {style_preference} close-up macro shot of a die-struck enamel pin pinned onto a denim jacket texture, featuring this logo design with metallic edges.'
+  },
+  {
+    id: 'keychain-motel',
+    name: 'Retro Motel Keychain',
+    description: 'Vintage diamond tag',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Motel+Key',
+    defaultPrompt: 'A {style_preference} macro photography shot of a vintage diamond-shaped plastic motel keychain tag lying on a textured surface, with this logo hot-stamped on the plastic.'
+  },
+  {
+    id: 'mousepad-office',
+    name: 'Office Mousepad',
+    description: 'Standard fabric pad',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Mousepad',
+    defaultPrompt: 'A {style_preference} workspace shot of a standard rectangular mousepad on a wooden desk next to a wireless mouse, featuring this logo printed clearly on the fabric surface.'
+  },
+  {
+    id: 'poster-street',
+    name: 'Urban Poster',
+    description: 'Wheatpaste street art',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Street+Poster',
+    defaultPrompt: 'A {style_preference} urban photography shot of a paper poster wheat-pasted onto a brick wall texture, featuring this logo as the main graphic art.'
+  },
+  {
+    id: 'apron-denim',
+    name: 'Denim Apron',
+    description: 'Workshop/Barista style',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Apron',
+    defaultPrompt: 'A {style_preference} studio shot of a durable denim workshop apron hanging on a wall hook, with this logo embroidered on the chest pocket area.'
+  },
+  {
+    id: 'coaster-set',
+    name: 'Coaster Set',
+    description: 'Ceramic drink coasters',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Coasters',
+    defaultPrompt: 'A {style_preference} lifestyle shot of a set of circular ceramic drink coasters on a marble coffee table, with this logo printed on the surface.'
   }
 ];
