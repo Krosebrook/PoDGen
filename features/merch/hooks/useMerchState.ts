@@ -7,12 +7,33 @@ import { useGenAI } from '@/shared/hooks/useGenAI';
 import { constructMerchPrompt, getErrorSuggestion, getVariationPrompts } from '../utils';
 import { generateImageBatch } from '@/services/gemini';
 
+export interface TextOverlayState {
+  text: string;
+  font: string;
+  color: string;
+  size: number;
+  x: number;
+  y: number;
+  align: 'left' | 'center' | 'right';
+}
+
 export const useMerchController = (onImageGenerated?: (url: string, prompt: string) => void) => {
   // State
   const [logoImage, setLogoImage] = useState<string | null>(null);
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<MerchProduct>(MERCH_PRODUCTS[0]);
   const [stylePreference, setStylePreference] = useState('');
+  
+  // Text Overlay State
+  const [textOverlay, setTextOverlay] = useState<TextOverlayState>({
+    text: '',
+    font: 'Inter, sans-serif',
+    color: '#ffffff',
+    size: 40,
+    x: 50, // Percent
+    y: 50,  // Percent
+    align: 'center'
+  });
   
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingBg, setIsUploadingBg] = useState(false);
@@ -131,11 +152,13 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     errorSuggestion,
     isUploadingLogo,
     isUploadingBg,
+    textOverlay,
     
     // Setters
     setSelectedProduct,
     setStylePreference,
     setVariations, // Exposed to allow selecting a variation as main
+    setTextOverlay,
     
     // Handlers
     handleLogoUpload,

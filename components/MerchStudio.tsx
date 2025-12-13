@@ -4,8 +4,8 @@ import { Spinner } from './ui/Spinner';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import { Upload, ShoppingBag, Download, Layers, AlertCircle, Lightbulb, Image as ImageIcon, X } from 'lucide-react';
-import { MerchProduct } from '../types';
-import { MERCH_PRODUCTS } from '../data/defaults';
+import { MerchProduct } from '../features/merch/types';
+import { MERCH_PRODUCTS } from '../features/merch/data/products';
 import { readImageFile } from '../utils/file';
 
 interface MerchStudioProps {

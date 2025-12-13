@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { INTEGRATION_PLATFORMS, MIME_TYPES } from '../data/defaults';
-import { IntegrationPlatform } from '../types';
+import { INTEGRATION_PLATFORMS, MIME_TYPES, IntegrationPlatform } from '../features/integrations/data/platforms';
 import { Copy, Check, Terminal, Code2, Settings, FileType, Share2 } from 'lucide-react';
 
 interface IntegrationCodeProps {

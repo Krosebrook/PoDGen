@@ -1,12 +1,14 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { AppError, ErrorCode, RateLimitError, SafetyError, ApiError, AuthenticationError } from '../shared/utils/errors';
+import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
+import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
 
 class GeminiService {
   private static instance: GeminiService;
   private client: GoogleGenAI | null = null;
   private readonly MODEL_NAME = "gemini-2.5-flash-image";
+  private readonly MAX_RETRIES = 3;
+  private readonly BASE_DELAY = 1000;
 
   private constructor() {}
 
@@ -28,9 +30,6 @@ class GeminiService {
     return this.client;
   }
 
-  /**
-   * Maps raw Gemini/Fetch errors to domain AppError types.
-   */
   private mapError(error: any): AppError {
     if (error instanceof AppError) return error;
 
@@ -64,17 +63,30 @@ class GeminiService {
     return new ApiError(msg, status || 500);
   }
 
-  /**
-   * Generates or edits an image using Gemini.
-   */
+  private async withRetry<T>(fn: () => Promise<T>, retries = this.MAX_RETRIES, delay = this.BASE_DELAY): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const mappedError = this.mapError(error);
+      
+      // Retry on Rate Limit (429) or Service Unavailable (503)
+      if (retries > 0 && (mappedError instanceof RateLimitError || (mappedError instanceof ApiError && mappedError.statusCode === 503))) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.withRetry(fn, retries - 1, delay * 2);
+      }
+      
+      throw mappedError;
+    }
+  }
+
   public async generateOrEditImage(
     mainImageBase64: string,
     prompt: string,
     additionalImagesBase64: string[] = []
   ): Promise<string> {
-    try {
+    return this.withRetry(async () => {
       const ai = this.getClient();
-      const parts: any[] = [];
+      const parts: Part[] = [];
 
       // 1. Add Main Image
       parts.push({
@@ -122,27 +134,22 @@ class GeminiService {
       }
       
       throw new ApiError("No image generated. The model returned a response without image data.", 422);
-      
-    } catch (error: any) {
-      console.error("Gemini Service Error:", error);
-      throw this.mapError(error);
-    }
+    });
   }
 
-  /**
-   * Generates multiple variations in parallel.
-   */
   public async generateImageBatch(
     mainImageBase64: string,
     prompts: string[],
     additionalImagesBase64: string[] = []
   ): Promise<string[]> {
-    // Execute all requests in parallel
+    // Execute all requests in parallel but with individual error handling
+    // We do NOT retry the whole batch if one fails, to keep it snappy. 
+    // The retry logic inside generateOrEditImage handles individual resilience.
     const promises = prompts.map(prompt => 
       this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64)
         .catch(err => {
           console.warn(`Variation failed for prompt "${prompt}":`, err);
-          return null; // Return null for failed variations to filter later
+          return null; 
         })
     );
 
@@ -151,7 +158,6 @@ class GeminiService {
   }
 }
 
-// Export singleton instance method wrappers
 export const generateOrEditImage = (
   mainImageBase64: string,
   prompt: string,

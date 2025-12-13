@@ -8,3 +8,7 @@ export interface GeneratedImage {
   timestamp: number;
   type: 'edit' | 'merch';
 }
+
+// Re-exporting feature specific interfaces if they need to be accessed globally,
+// though ideally they should stay within their feature modules.
+// For the AppMode switch in App.tsx, we only need AppMode.

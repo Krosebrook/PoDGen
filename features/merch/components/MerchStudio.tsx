@@ -3,12 +3,13 @@ import React, { Suspense } from 'react';
 import { useMerchController } from '../hooks/useMerchState';
 import { Alert, Button, Spinner, Tooltip } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
-import { Layers } from 'lucide-react';
+import { Layers, Sparkles } from 'lucide-react';
 
 // Lazy load heavy components
 const ProductGrid = React.lazy(() => import('./ProductGrid').then(module => ({ default: module.ProductGrid })));
 const UploadArea = React.lazy(() => import('./UploadArea').then(module => ({ default: module.UploadArea })));
 const StyleSelector = React.lazy(() => import('./StyleSelector').then(module => ({ default: module.StyleSelector })));
+const TextOverlayControls = React.lazy(() => import('./TextOverlayControls').then(module => ({ default: module.TextOverlayControls })));
 const MerchPreview = React.lazy(() => import('./MerchPreview').then(module => ({ default: module.MerchPreview })));
 
 interface MerchStudioProps {
@@ -36,7 +37,8 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
     resultImage, loading, variations, isGeneratingVariations,
     activeError, errorSuggestion,
     isUploadingLogo, isUploadingBg,
-    setSelectedProduct, setStylePreference,
+    textOverlay,
+    setSelectedProduct, setStylePreference, setTextOverlay,
     handleLogoUpload, handleBgUpload, handleGenerate, handleGenerateVariations,
     clearLogo, clearBg, clearActiveError
   } = useMerchController(onImageGenerated);
@@ -91,33 +93,59 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
            </Suspense>
         </StepSection>
 
+        <StepSection number={5} title="Add Text Overlay">
+           <Suspense fallback={<ControlFallback />}>
+             <TextOverlayControls 
+               overlay={textOverlay}
+               onChange={setTextOverlay}
+               disabled={!resultImage}
+             />
+           </Suspense>
+        </StepSection>
+
         {activeError && (
           <div className="animate-fadeIn">
             <Alert message={activeError} onDismiss={clearActiveError} />
           </div>
         )}
         
-        <Tooltip 
-          content={isGenerateDisabled ? "Upload a logo to start" : "Generate high-res mockup"}
-          side="top"
-        >
-          <div className="w-full"> {/* Wrapper needed because disabled buttons don't fire events in some browsers */}
-            <Button 
-              onClick={handleGenerate} 
-              loading={loading}
-              loadingText="Generating Mockup..."
-              disabled={isGenerateDisabled}
-              icon={<Layers className="w-6 h-6" />}
-              className={`w-full mt-2 py-4 text-lg transition-all duration-300 ${
-                isGenerateDisabled
-                  ? 'grayscale' 
-                  : 'shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] hover:-translate-y-0.5'
-              }`}
-            >
-              Generate Mockup
-            </Button>
-          </div>
-        </Tooltip>
+        <div className="flex flex-col gap-3 mt-2">
+          <Tooltip 
+            content={isGenerateDisabled ? "Upload a logo to start" : "Generate high-res mockup"}
+            side="top"
+          >
+            <div className="w-full">
+              <Button 
+                onClick={handleGenerate} 
+                loading={loading}
+                loadingText="Generating Mockup..."
+                disabled={isGenerateDisabled}
+                icon={<Layers className="w-6 h-6" />}
+                className={`w-full py-4 text-lg transition-all duration-300 ${
+                  isGenerateDisabled
+                    ? 'grayscale' 
+                    : 'shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] hover:-translate-y-0.5'
+                }`}
+              >
+                Generate Mockup
+              </Button>
+            </div>
+          </Tooltip>
+
+          {/* Explicit Variations Button */}
+          {!loading && resultImage && (
+             <Button 
+                variant="secondary"
+                onClick={handleGenerateVariations}
+                loading={isGeneratingVariations}
+                loadingText="Creating Variations..."
+                icon={<Sparkles className="w-4 h-4 text-indigo-300" />}
+                className="w-full border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 shadow-sm"
+             >
+               Generate 3 Variations
+             </Button>
+          )}
+        </div>
       </div>
 
       {/* Preview Area */}
@@ -134,6 +162,8 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
               productName={selectedProduct.name}
               stylePreference={stylePreference}
               productId={selectedProduct.id}
+              textOverlay={textOverlay}
+              onTextOverlayChange={setTextOverlay}
            />
          </Suspense>
       </div>

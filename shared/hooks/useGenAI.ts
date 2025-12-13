@@ -18,6 +18,7 @@ export const useGenAI = (): UseGenAIResult => {
   const [resultImage, setResultImage] = useState<string | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
+  
   const reset = useCallback(() => {
     setLoading(false);
     setError(null);
@@ -39,7 +40,7 @@ export const useGenAI = (): UseGenAIResult => {
       const result = await generateOrEditImage(imageBase64, prompt, additionalImages);
       setResultImage(result);
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("GenAI Hook caught error:", err);
       
       let msg = "An unexpected error occurred.";

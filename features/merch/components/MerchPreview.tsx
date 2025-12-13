@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Spinner, Button, Tooltip } from '@/shared/components/ui';
 import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
+import { TextOverlayState } from '../hooks/useMerchState';
 
 interface MerchPreviewProps {
   loading: boolean;
@@ -16,6 +17,8 @@ interface MerchPreviewProps {
   productName: string;
   stylePreference: string;
   productId: string;
+  textOverlay?: TextOverlayState;
+  onTextOverlayChange?: (overlay: TextOverlayState) => void;
 }
 
 export const MerchPreview: React.FC<MerchPreviewProps> = ({
@@ -28,11 +31,16 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   errorSuggestion,
   productName,
   stylePreference,
-  productId
+  productId,
+  textOverlay,
+  onTextOverlayChange
 }) => {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [isExporting, setIsExporting] = useState(false);
   const [viewImage, setViewImage] = useState<string | null>(null);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDraggingText, setIsDraggingText] = useState(false);
 
   // Determine which image to show prominently (viewImage override, or resultImage)
   const activeImage = viewImage || resultImage;
@@ -41,7 +49,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     setIsExporting(true);
     const filename = `merch-${productId}-${Date.now()}`;
     try {
-      await saveImage(img, filename, exportFormat);
+      await saveImage(img, filename, exportFormat, 1, textOverlay);
     } catch (err) {
       console.error(err);
       alert("Failed to export image. Please try again.");
@@ -50,8 +58,44 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     }
   };
 
+  const handleTextDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingText(true);
+  };
+
+  const handleTextDragMove = (e: React.MouseEvent) => {
+    if (!isDraggingText || !containerRef.current || !onTextOverlayChange || !textOverlay) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    onTextOverlayChange({
+      ...textOverlay,
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    });
+  };
+
+  const handleTextDragEnd = () => {
+    setIsDraggingText(false);
+  };
+
+  const getTransform = (align: string = 'center') => {
+    switch (align) {
+      case 'left': return 'translate(0, -50%)'; // Anchor is left-center
+      case 'right': return 'translate(-100%, -50%)'; // Anchor is right-center
+      default: return 'translate(-50%, -50%)'; // Anchor is center-center
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div 
+      className="flex flex-col h-full gap-4"
+      onMouseMove={handleTextDragMove}
+      onMouseUp={handleTextDragEnd}
+      onMouseLeave={handleTextDragEnd}
+    >
       {/* Main Preview Area */}
       <div className="bg-slate-900 rounded-2xl border border-slate-700 p-1 relative overflow-hidden flex flex-col flex-1 min-h-[400px]">
         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white flex items-center gap-2">
@@ -59,14 +103,41 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
           {stylePreference && <span className="text-slate-400 border-l border-white/20 pl-2">{stylePreference}</span>}
         </div>
 
-        <div className="flex-1 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950">
+        <div 
+           ref={containerRef}
+           className="flex-1 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 relative overflow-hidden"
+        >
           {loading ? (
             <div className="flex flex-col items-center">
               <Spinner className="w-16 h-16 text-indigo-500 mb-6" />
               <p className="text-xl text-slate-300 font-light tracking-wide animate-pulse">Designing your {productName}...</p>
             </div>
           ) : activeImage ? (
-            <img src={activeImage} alt="Merch Mockup" className="max-w-full max-h-full object-contain rounded shadow-2xl animate-fadeIn" />
+            <div className="relative max-w-full max-h-full flex items-center justify-center">
+              <img src={activeImage} alt="Merch Mockup" className="max-w-full max-h-full object-contain rounded shadow-2xl animate-fadeIn" />
+              
+              {/* Text Overlay Layer */}
+              {textOverlay && textOverlay.text && (
+                 <div
+                   onMouseDown={handleTextDragStart}
+                   className={`absolute cursor-move select-none whitespace-nowrap z-20 ${isDraggingText ? 'opacity-80' : 'opacity-100'}`}
+                   style={{
+                     left: `${textOverlay.x}%`,
+                     top: `${textOverlay.y}%`,
+                     transform: getTransform(textOverlay.align),
+                     fontFamily: textOverlay.font,
+                     fontSize: `${textOverlay.size}px`,
+                     color: textOverlay.color,
+                     textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                     textAlign: textOverlay.align
+                   }}
+                 >
+                   {textOverlay.text}
+                   {/* Hover Border for visual feedback */}
+                   <div className="absolute inset-[-4px] border border-transparent hover:border-blue-400/50 rounded pointer-events-none transition-colors" />
+                 </div>
+              )}
+            </div>
           ) : error ? (
             <div className="text-center opacity-90 max-w-md px-6 animate-fadeIn">
               <div className="bg-red-500/10 p-6 rounded-full inline-block mb-4">
@@ -98,13 +169,14 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
           <div className="p-4 bg-slate-800 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
                {/* Generate Variations Button */}
-               {!loading && !isGeneratingVariations && variations.length === 0 && (
-                 <Tooltip content="Create 3 unique AI variations" side="top">
+               {!loading && !isGeneratingVariations && (
+                 <Tooltip content={variations.length > 0 ? "Regenerate variations" : "Create 3 unique AI variations"} side="top">
                    <button
                      onClick={onGenerateVariations}
                      className="text-xs flex items-center gap-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-full transition-all"
                    >
-                     <Sparkles className="w-3 h-3" /> Generate 3 Variations
+                     <Sparkles className="w-3 h-3" /> 
+                     {variations.length > 0 ? 'Regenerate Variations' : 'Generate 3 Variations'}
                    </button>
                  </Tooltip>
                )}

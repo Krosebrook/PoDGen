@@ -4,6 +4,16 @@
  */
 export type ExportFormat = 'png' | 'jpg' | 'svg';
 
+export interface TextOverlayConfig {
+  text: string;
+  font: string;
+  color: string;
+  size: number;
+  x: number; // Percentage 0-100
+  y: number; // Percentage 0-100
+  align?: 'left' | 'center' | 'right';
+}
+
 /**
  * Downloads a data URL as a file.
  */
@@ -33,17 +43,19 @@ export const getMimeType = (b64: string): string => {
 
 /**
  * Processes and saves an image in the specified format and scale.
+ * Optionally burns text overlay onto the image.
  */
 export const saveImage = async (
   imageUrl: string,
   filename: string,
   format: ExportFormat,
-  scale: number = 1
+  scale: number = 1,
+  overlay?: TextOverlayConfig
 ): Promise<void> => {
   const fullFilename = `${filename}.${format}`;
 
   try {
-    // Handle SVG Export (Vector wrapping)
+    // Handle SVG Export (Vector wrapping) - Overlay not fully supported in simple wrapper yet
     if (format === 'svg') {
       const img = new Image();
       img.src = imageUrl;
@@ -52,8 +64,17 @@ export const saveImage = async (
         img.onerror = reject;
       });
 
+      // Basic SVG text construction
+      let textElement = '';
+      if (overlay && overlay.text) {
+         // Default to middle anchor for SVG simple export if align missing
+         const anchor = overlay.align === 'left' ? 'start' : overlay.align === 'right' ? 'end' : 'middle';
+         textElement = `<text x="${overlay.x}%" y="${overlay.y}%" fill="${overlay.color}" font-family="${overlay.font}" font-size="${overlay.size}px" text-anchor="${anchor}" dominant-baseline="middle">${overlay.text}</text>`;
+      }
+
       const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${img.naturalWidth}" height="${img.naturalHeight}">
         <image href="${imageUrl}" width="${img.naturalWidth}" height="${img.naturalHeight}" />
+        ${textElement}
       </svg>`;
 
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
@@ -86,6 +107,24 @@ export const saveImage = async (
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, width, height);
+
+    // Apply Text Overlay
+    if (overlay && overlay.text) {
+      // Scale font size relative to original image if scale != 1
+      const scaledFontSize = overlay.size * scale;
+      ctx.font = `${scaledFontSize}px ${overlay.font}`;
+      ctx.fillStyle = overlay.color;
+      
+      // Handle alignment
+      ctx.textAlign = overlay.align || 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Calculate position based on percentage
+      const x = (overlay.x / 100) * width;
+      const y = (overlay.y / 100) * height;
+      
+      ctx.fillText(overlay.text, x, y);
+    }
 
     const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
     const dataUrl = canvas.toDataURL(mimeType, 0.95);
