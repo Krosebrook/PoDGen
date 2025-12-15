@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Spinner, Button, Tooltip } from '@/shared/components/ui';
 import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
@@ -43,7 +43,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   const [isDraggingText, setIsDraggingText] = useState(false);
   const rafRef = useRef<number | null>(null);
 
-  // Determine which image to show prominently (viewImage override, or resultImage)
   const activeImage = viewImage || resultImage;
 
   const handleExport = async (img: string) => {
@@ -60,6 +59,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   };
 
   const handleTextDragStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
     e.preventDefault();
     setIsDraggingText(true);
   };
@@ -67,24 +67,23 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   const handleTextDragMove = useCallback((e: React.MouseEvent) => {
     if (!isDraggingText || !containerRef.current || !onTextOverlayChange || !textOverlay) return;
     
-    // Throttle via RAF
+    // Throttle updates using requestAnimationFrame to prevent layout thrashing
     if (rafRef.current) return;
 
+    // Capture values needed for calculation
     const clientX = e.clientX;
     const clientY = e.clientY;
+    const rect = containerRef.current.getBoundingClientRect();
 
     rafRef.current = requestAnimationFrame(() => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = ((clientX - rect.left) / rect.width) * 100;
-        const y = ((clientY - rect.top) / rect.height) * 100;
-        
-        onTextOverlayChange({
-          ...textOverlay,
-          x: Math.max(0, Math.min(100, x)),
-          y: Math.max(0, Math.min(100, y))
-        });
-      }
+      const x = ((clientX - rect.left) / rect.width) * 100;
+      const y = ((clientY - rect.top) / rect.height) * 100;
+      
+      onTextOverlayChange({
+        ...textOverlay,
+        x: Math.max(0, Math.min(100, x)),
+        y: Math.max(0, Math.min(100, y))
+      });
       rafRef.current = null;
     });
   }, [isDraggingText, onTextOverlayChange, textOverlay]);
@@ -99,9 +98,9 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
 
   const getTransform = (align: string = 'center') => {
     switch (align) {
-      case 'left': return 'translate(0, -50%)'; // Anchor is left-center
-      case 'right': return 'translate(-100%, -50%)'; // Anchor is right-center
-      default: return 'translate(-50%, -50%)'; // Anchor is center-center
+      case 'left': return 'translate(0, -50%)'; 
+      case 'right': return 'translate(-100%, -50%)';
+      default: return 'translate(-50%, -50%)';
     }
   };
 
@@ -111,14 +110,18 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
       onMouseMove={handleTextDragMove}
       onMouseUp={handleTextDragEnd}
       onMouseLeave={handleTextDragEnd}
+      role="region"
+      aria-label="Merch Preview Area"
     >
       {/* Main Preview Area */}
       <div className="bg-slate-900 rounded-2xl border border-slate-700 p-1 relative overflow-hidden flex flex-col flex-1 min-h-[400px]">
+        {/* Status Badge */}
         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white flex items-center gap-2">
           <span>{productName} Preview</span>
           {stylePreference && <span className="text-slate-400 border-l border-white/20 pl-2">{stylePreference}</span>}
         </div>
 
+        {/* Canvas */}
         <div 
            ref={containerRef}
            className="flex-1 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 relative overflow-hidden"
@@ -132,11 +135,13 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
             <div className="relative max-w-full max-h-full flex items-center justify-center">
               <img src={activeImage} alt="Merch Mockup" className="max-w-full max-h-full object-contain rounded shadow-2xl animate-fadeIn" />
               
-              {/* Text Overlay Layer */}
+              {/* Text Overlay */}
               {textOverlay && textOverlay.text && (
                  <div
                    onMouseDown={handleTextDragStart}
                    className={`absolute cursor-move select-none whitespace-pre-wrap z-20 ${isDraggingText ? 'opacity-80' : ''}`}
+                   role="button"
+                   aria-label="Draggable text overlay"
                    style={{
                      left: `${textOverlay.x}%`,
                      top: `${textOverlay.y}%`,
@@ -151,7 +156,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
                    }}
                  >
                    {textOverlay.text}
-                   {/* Hover Border for visual feedback */}
                    <div className="absolute inset-[-4px] border border-transparent hover:border-blue-400/50 rounded pointer-events-none transition-colors" />
                  </div>
               )}
@@ -186,7 +190,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
         {activeImage && (
           <div className="p-4 bg-slate-800 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-               {/* Generate Variations Button */}
                {!loading && !isGeneratingVariations && (
                  <Tooltip content={variations.length > 0 ? "Regenerate variations" : "Create 3 unique AI variations"} side="top">
                    <button
@@ -201,7 +204,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Format Controls */}
               <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700 hidden sm:flex">
                 <Tooltip content="Set export format to PNG">
                   <button
@@ -234,7 +236,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
         )}
       </div>
       
-      {/* Variations Strip (Extracted) */}
       <MerchVariations 
         variations={variations}
         isGenerating={isGeneratingVariations}

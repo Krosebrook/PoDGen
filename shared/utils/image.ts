@@ -28,24 +28,155 @@ const downloadDataUrl = (dataUrl: string, filename: string) => {
   document.body.removeChild(link);
 };
 
-/**
- * Removes the Data URL prefix to get raw Base64 string.
- */
 export const cleanBase64 = (b64: string): string => {
   return b64.replace(/^data:image\/(png|jpeg|jpg|webp|heic);base64,/, "");
 };
 
-/**
- * Robustly detects mime type from base64 header.
- */
 export const getMimeType = (b64: string): string => {
   const match = b64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
   return match ? match[1] : 'image/png';
 };
 
 /**
- * Processes and saves an image in the specified format and scale.
- * Optionally burns text overlay onto the image.
+ * Helper class to handle complex canvas text rendering
+ */
+class CanvasTextRenderer {
+  constructor(
+    private ctx: CanvasRenderingContext2D,
+    private config: TextOverlayConfig,
+    private width: number,
+    private height: number,
+    private scale: number
+  ) {}
+
+  public render() {
+    if (!this.config.text) return;
+
+    this.ctx.save();
+    
+    // 1. Configure Font
+    const scaledFontSize = this.config.size * this.scale;
+    const lineHeight = scaledFontSize * 1.2;
+    this.ctx.font = `${scaledFontSize}px ${this.config.font}`;
+    this.ctx.fillStyle = this.config.color;
+    
+    // 2. Calculate Anchor Position
+    const x = (this.config.x / 100) * this.width;
+    const y = (this.config.y / 100) * this.height;
+
+    // 3. Transformation (Translate & Rotate)
+    this.ctx.translate(x, y);
+    if (this.config.rotation) {
+      this.ctx.rotate((this.config.rotation * Math.PI) / 180);
+    }
+    if (this.config.opacity !== undefined) {
+      this.ctx.globalAlpha = this.config.opacity / 100;
+    }
+
+    // 4. Alignment settings
+    this.ctx.textAlign = this.config.align || 'center';
+    this.ctx.textBaseline = 'middle'; 
+
+    // 5. Multiline Rendering
+    const lines = this.config.text.split('\n');
+    const totalBlockHeight = lines.length * lineHeight;
+    const startY = -(totalBlockHeight / 2) + (lineHeight / 2);
+
+    lines.forEach((line, i) => {
+      // Offset from the centered block start
+      const lineOffset = i * lineHeight;
+      this.ctx.fillText(line, 0, startY + lineOffset);
+    });
+
+    this.ctx.restore();
+  }
+}
+
+/**
+ * Strategy for Raster Export (PNG/JPG)
+ */
+const exportToRaster = async (
+  img: HTMLImageElement, 
+  filename: string, 
+  format: 'png' | 'jpg', 
+  scale: number, 
+  overlay?: TextOverlayConfig
+) => {
+  const canvas = document.createElement('canvas');
+  const width = img.naturalWidth * scale;
+  const height = img.naturalHeight * scale;
+
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error("Could not get canvas context");
+
+  // High quality settings
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, width, height);
+
+  if (overlay) {
+    new CanvasTextRenderer(ctx, overlay, width, height, scale).render();
+  }
+
+  const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+  const dataUrl = canvas.toDataURL(mimeType, 0.95); // 0.95 quality for JPG
+  downloadDataUrl(dataUrl, `${filename}.${format}`);
+};
+
+/**
+ * Strategy for SVG Export
+ */
+const exportToSvg = (
+  img: HTMLImageElement,
+  filename: string,
+  overlay?: TextOverlayConfig
+) => {
+  // SVG Text Construction
+  let textElement = '';
+  if (overlay && overlay.text) {
+    const anchor = overlay.align === 'left' ? 'start' : overlay.align === 'right' ? 'end' : 'middle';
+    const lines = overlay.text.split('\n');
+    const lineHeight = overlay.size * 1.2;
+    
+    // Calculate vertical centering logic for SVG tspan
+    // dy logic: first line is offset, subsequent lines are relative
+    const totalHeight = lines.length * lineHeight;
+    // We start drawing from the vertical center (y), so we move up by half total height
+    const startYOffset = -(totalHeight / 2) + (lineHeight / 2); // approximate baseline adjustment
+
+    const tspans = lines.map((line, i) => 
+      `<tspan x="${overlay.x}%" dy="${i === 0 ? startYOffset : lineHeight}px">${line}</tspan>`
+    ).join('');
+
+    textElement = `<text 
+      x="${overlay.x}%" 
+      y="${overlay.y}%" 
+      fill="${overlay.color}" 
+      font-family="${overlay.font}" 
+      font-size="${overlay.size}px" 
+      text-anchor="${anchor}" 
+      dominant-baseline="middle" 
+      opacity="${(overlay.opacity || 100) / 100}" 
+      transform="rotate(${overlay.rotation || 0}, ${overlay.x}%, ${overlay.y}%)"
+    >${tspans}</text>`;
+  }
+
+  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${img.naturalWidth}" height="${img.naturalHeight}">
+    <image href="${img.src}" width="${img.naturalWidth}" height="${img.naturalHeight}" />
+    ${textElement}
+  </svg>`;
+
+  const blob = new Blob([svgString], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  downloadDataUrl(url, `${filename}.svg`);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Main Export Entry Point
  */
 export const saveImage = async (
   imageUrl: string,
@@ -54,123 +185,21 @@ export const saveImage = async (
   scale: number = 1,
   overlay?: TextOverlayConfig
 ): Promise<void> => {
-  const fullFilename = `${filename}.${format}`;
-
   try {
-    // Handle SVG Export (Vector wrapping)
-    if (format === 'svg') {
-      const img = new Image();
-      img.src = imageUrl;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-
-      // Basic SVG text construction (approximate for multiline)
-      let textElement = '';
-      if (overlay && overlay.text) {
-         const anchor = overlay.align === 'left' ? 'start' : overlay.align === 'right' ? 'end' : 'middle';
-         const lines = overlay.text.split('\n');
-         const lineHeight = overlay.size * 1.2;
-         
-         // Center block vertically around Y
-         const totalHeight = lines.length * lineHeight;
-         const startYOffset = - (totalHeight / 2) + (lineHeight / 2);
-
-         textElement = `<text x="${overlay.x}%" y="${overlay.y}%" fill="${overlay.color}" font-family="${overlay.font}" font-size="${overlay.size}px" text-anchor="${anchor}" dominant-baseline="middle" opacity="${(overlay.opacity || 100) / 100}" transform="rotate(${overlay.rotation || 0}, ${overlay.x}%, ${overlay.y}%)">
-           ${lines.map((line, i) => `<tspan x="${overlay.x}%" dy="${i === 0 ? startYOffset : lineHeight}">${line}</tspan>`).join('')}
-         </text>`;
-      }
-
-      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${img.naturalWidth}" height="${img.naturalHeight}">
-        <image href="${imageUrl}" width="${img.naturalWidth}" height="${img.naturalHeight}" />
-        ${textElement}
-      </svg>`;
-
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      downloadDataUrl(url, fullFilename);
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    // Handle Raster Export (PNG/JPG)
     const img = new Image();
     img.src = imageUrl;
-    img.crossOrigin = "anonymous"; 
+    img.crossOrigin = "anonymous";
 
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Failed to load image source"));
     });
 
-    const canvas = document.createElement('canvas');
-    const width = img.naturalWidth * scale;
-    const height = img.naturalHeight * scale;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error("Could not get canvas context");
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, 0, 0, width, height);
-
-    // Apply Text Overlay
-    if (overlay && overlay.text) {
-      ctx.save();
-
-      // Scale font size relative to original image if scale != 1
-      const scaledFontSize = overlay.size * scale;
-      const lineHeight = scaledFontSize * 1.2;
-      ctx.font = `${scaledFontSize}px ${overlay.font}`;
-      ctx.fillStyle = overlay.color;
-      
-      // Calculate position
-      const x = (overlay.x / 100) * width;
-      const y = (overlay.y / 100) * height;
-
-      // Translate context to position for rotation support
-      ctx.translate(x, y);
-
-      // Rotate
-      if (overlay.rotation) {
-        ctx.rotate((overlay.rotation * Math.PI) / 180);
-      }
-
-      // Opacity
-      if (overlay.opacity !== undefined) {
-        ctx.globalAlpha = overlay.opacity / 100;
-      }
-      
-      // Handle alignment
-      ctx.textAlign = overlay.align || 'center';
-      ctx.textBaseline = 'middle'; // We will adjust Y manually for multiline centering
-      
-      // Split text into lines
-      const lines = overlay.text.split('\n');
-      const totalHeight = lines.length * lineHeight;
-      
-      // Draw lines
-      // Start Y is shifted up by half the total height, then down by half a line height (since textBaseline is middle)
-      // Actually simpler: 
-      // i=0 center is at: -totalHeight/2 + lineHeight/2
-      
-      lines.forEach((line, i) => {
-        const lineY = (i - (lines.length - 1) / 2) * lineHeight;
-        ctx.fillText(line, 0, lineY);
-      });
-
-      ctx.restore();
+    if (format === 'svg') {
+      exportToSvg(img, filename, overlay);
+    } else {
+      await exportToRaster(img, filename, format, scale, overlay);
     }
-
-    const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
-    const dataUrl = canvas.toDataURL(mimeType, 0.95);
-    
-    downloadDataUrl(dataUrl, fullFilename);
-
   } catch (error) {
     console.error("Export failed:", error);
     throw new Error("Failed to process and save image.");

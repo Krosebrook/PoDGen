@@ -27,10 +27,10 @@ export const MerchVariations: React.FC<MerchVariationsProps> = ({
         <span className="text-sm font-semibold text-slate-200">Alternative Angles & Lighting</span>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {/* If variations are loading, show skeletons */}
-        {isGenerating ? Array(3).fill(0).map((_, i) => (
-           <div key={i} className="aspect-square bg-slate-800 rounded-lg animate-pulse flex items-center justify-center">
+        {isGenerating ? Array(5).fill(0).map((_, i) => (
+           <div key={i} className="aspect-square bg-slate-800 rounded-lg animate-pulse flex items-center justify-center border border-slate-700">
              <Spinner className="w-6 h-6 text-slate-600" />
            </div>
         )) : (

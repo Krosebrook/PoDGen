@@ -13,18 +13,33 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent flickering when dragging over child elements
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
+    
     setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) onFileSelect(file);
@@ -32,14 +47,15 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
 
   return (
     <div 
-      className={`flex-1 border-dashed rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-200 ease-out cursor-pointer
+      className={`flex-1 border-dashed rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-300 ease-out cursor-pointer
         ${isDragging 
-          ? 'border-4 border-blue-500 bg-blue-500/20 scale-[1.01] shadow-xl shadow-blue-500/10' 
+          ? 'border-4 border-blue-500 bg-blue-500/20 scale-[1.01] shadow-2xl shadow-blue-500/20' 
           : error 
             ? 'border-2 border-red-500/50 bg-slate-800/50' 
             : 'border-2 border-slate-700 bg-slate-800/50 hover:border-blue-500 hover:bg-slate-800'
         }`}
       onClick={() => fileInputRef.current?.click()}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -48,17 +64,17 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
         <img 
           src={selectedImage} 
           alt="Original" 
-          className="max-h-full max-w-full object-contain p-4"
+          className="max-h-full max-w-full object-contain p-4 pointer-events-none select-none"
         />
       ) : (
-        <div className="text-center p-6 pointer-events-none">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors ${isDragging ? 'bg-blue-600 scale-110' : 'bg-slate-700 group-hover:bg-blue-600'}`}>
+        <div className="text-center p-6 pointer-events-none select-none">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-transform duration-300 ${isDragging ? 'bg-blue-600 scale-110' : 'bg-slate-700 group-hover:bg-blue-600'}`}>
             <Upload className={`w-8 h-8 ${isDragging ? 'text-white' : 'text-slate-300'}`} />
           </div>
-          <p className={`font-medium text-lg transition-colors ${isDragging ? 'text-blue-300' : 'text-slate-300'}`}>
-            {isDragging ? 'Drop Image Here' : 'Upload Source Image'}
+          <p className={`font-medium text-lg transition-colors duration-300 ${isDragging ? 'text-blue-200' : 'text-slate-300'}`}>
+            {isDragging ? 'Drop to Upload' : 'Upload Source Image'}
           </p>
-          <p className="text-slate-500 text-sm mt-2">
+          <p className={`text-sm mt-2 transition-colors ${isDragging ? 'text-blue-300/70' : 'text-slate-500'}`}>
             Click to browse, drag & drop, or paste (Ctrl+V)
           </p>
         </div>

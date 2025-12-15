@@ -1,9 +1,9 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useMerchController } from '../hooks/useMerchState';
 import { Alert, Button, Spinner, Tooltip } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
-import { Layers, Sparkles, Lightbulb } from 'lucide-react';
+import { Layers, Sparkles, Lightbulb, Box, Image as ImageIcon } from 'lucide-react';
 
 // Lazy load heavy components
 const ProductGrid = React.lazy(() => import('./ProductGrid').then(module => ({ default: module.ProductGrid })));
@@ -11,6 +11,7 @@ const UploadArea = React.lazy(() => import('./UploadArea').then(module => ({ def
 const StyleSelector = React.lazy(() => import('./StyleSelector').then(module => ({ default: module.StyleSelector })));
 const TextOverlayControls = React.lazy(() => import('./TextOverlayControls').then(module => ({ default: module.TextOverlayControls })));
 const MerchPreview = React.lazy(() => import('./MerchPreview').then(module => ({ default: module.MerchPreview })));
+const Merch3DViewer = React.lazy(() => import('./Merch3DViewer').then(module => ({ default: module.Merch3DViewer })));
 
 interface MerchStudioProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -43,6 +44,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
     clearLogo, clearBg, clearActiveError
   } = useMerchController(onImageGenerated);
 
+  const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
   const isGenerateDisabled = !logoImage || isUploadingLogo || isUploadingBg;
 
   return (
@@ -146,32 +148,71 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
                 loading={isGeneratingVariations}
                 loadingText="Creating Variations..."
                 icon={<Sparkles className="w-4 h-4 text-indigo-300" />}
-                className="w-full border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 shadow-sm"
+                className="w-full border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 shadow-sm transition-all hover:border-indigo-500/50"
              >
-               Generate 3 Variations
+               Generate 5 Variations
              </Button>
           )}
         </div>
       </div>
 
       {/* Preview Area */}
-      <div className="lg:col-span-8 xl:col-span-9">
-         <Suspense fallback={<PreviewFallback />}>
-           <MerchPreview 
-              loading={loading}
-              resultImage={resultImage}
-              variations={variations}
-              isGeneratingVariations={isGeneratingVariations}
-              onGenerateVariations={handleGenerateVariations}
-              error={activeError}
-              errorSuggestion={errorSuggestion}
-              productName={selectedProduct.name}
-              stylePreference={stylePreference}
-              productId={selectedProduct.id}
-              textOverlay={textOverlay}
-              onTextOverlayChange={setTextOverlay}
-           />
-         </Suspense>
+      <div className="lg:col-span-8 xl:col-span-9 flex flex-col h-full">
+         <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-slate-200">
+               {viewMode === '2D' ? 'AI Generated Preview' : '3D Product Inspector'}
+            </h2>
+            
+            {/* View Mode Toggle */}
+            <div className="bg-slate-800 p-1 rounded-lg flex border border-slate-700">
+               <button
+                  onClick={() => setViewMode('2D')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '2D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+               >
+                  <ImageIcon className="w-4 h-4" />
+                  AI Mockup
+               </button>
+               <button
+                  onClick={() => setViewMode('3D')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '3D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                  disabled={!logoImage}
+                  title={!logoImage ? "Upload a logo first" : ""}
+               >
+                  <Box className="w-4 h-4" />
+                  3D View
+               </button>
+            </div>
+         </div>
+
+         <div className="flex-1 bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden relative min-h-[500px]">
+           <Suspense fallback={<PreviewFallback />}>
+             {viewMode === '2D' ? (
+                <MerchPreview 
+                    loading={loading}
+                    resultImage={resultImage}
+                    variations={variations}
+                    isGeneratingVariations={isGeneratingVariations}
+                    onGenerateVariations={handleGenerateVariations}
+                    error={activeError}
+                    errorSuggestion={errorSuggestion}
+                    productName={selectedProduct.name}
+                    stylePreference={stylePreference}
+                    productId={selectedProduct.id}
+                    textOverlay={textOverlay}
+                    onTextOverlayChange={setTextOverlay}
+                />
+             ) : (
+                logoImage ? (
+                  <Merch3DViewer logo={logoImage} productName={selectedProduct.name} />
+                ) : (
+                   <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-4">
+                      <Box className="w-16 h-16 opacity-20" />
+                      <p>Upload a logo to enable 3D inspection</p>
+                   </div>
+                )
+             )}
+           </Suspense>
+         </div>
       </div>
     </div>
   );

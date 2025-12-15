@@ -16,12 +16,13 @@ export const useGenAI = (): UseGenAIResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  
+  // Ref to track the active request controller
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
   
   const reset = useCallback(() => {
-    // Abort any ongoing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -47,12 +48,11 @@ export const useGenAI = (): UseGenAIResult => {
   ): Promise<boolean> => {
     if (!imageBase64 || !prompt) return false;
 
-    // Abort previous request if exists
+    // Abort any existing request before starting a new one
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new controller
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -65,32 +65,35 @@ export const useGenAI = (): UseGenAIResult => {
         signal: controller.signal 
       });
       
-      if (!controller.signal.aborted) {
-        setResultImage(result);
-        return true;
-      }
-      return false;
+      // Check if aborted during await
+      if (controller.signal.aborted) return false;
+
+      setResultImage(result);
+      return true;
+
     } catch (err: unknown) {
-      // Ignore abort errors
+      if (controller.signal.aborted) return false;
+      
+      // Silent catch for specific abort errors if they slip through
       if (err instanceof Error && (err.name === 'AbortError' || err.message === 'Request aborted')) {
         return false;
       }
 
-      console.error("GenAI Hook caught error:", err);
+      console.error("GenAI Hook Error:", err);
       
-      let msg = "An unexpected error occurred.";
+      let errorMessage = "An unexpected error occurred.";
       if (err instanceof AppError) {
-        msg = err.message;
+        errorMessage = err.message;
       } else if (err instanceof Error) {
-        msg = err.message;
+        errorMessage = err.message;
       }
 
-      if (!controller.signal.aborted) {
-        setError(msg);
-      }
+      setError(errorMessage);
       return false;
+
     } finally {
-      if (!controller.signal.aborted) {
+      // Only update loading state if this is still the active request
+      if (abortControllerRef.current === controller) {
         setLoading(false);
         abortControllerRef.current = null;
       }

@@ -8,13 +8,28 @@ interface RequestOptions {
   timeout?: number;
 }
 
+interface ImagePart {
+  inlineData: {
+    data: string;
+    mimeType: string;
+  };
+}
+
+interface TextPart {
+  text: string;
+}
+
+type ModelPart = ImagePart | TextPart;
+
 class GeminiService {
   private static instance: GeminiService;
   private client: GoogleGenAI | null = null;
+  
+  // Configuration constants
   private readonly MODEL_NAME = "gemini-2.5-flash-image";
   private readonly MAX_RETRIES = 3;
-  private readonly BASE_DELAY = 1000;
-  private readonly DEFAULT_TIMEOUT = 60000; // 60 seconds
+  private readonly BASE_DELAY_MS = 1000;
+  private readonly DEFAULT_TIMEOUT_MS = 60000;
 
   private constructor() {}
 
@@ -25,6 +40,10 @@ class GeminiService {
     return GeminiService.instance;
   }
 
+  /**
+   * Lazy initialization of the GenAI client.
+   * Throws AuthenticationError if API key is missing.
+   */
   private getClient(): GoogleGenAI {
     if (!this.client) {
       const apiKey = process.env.API_KEY;
@@ -36,13 +55,16 @@ class GeminiService {
     return this.client;
   }
 
-  private mapError(error: any): AppError {
+  /**
+   * Maps unknown errors to typed AppError instances.
+   */
+  private static mapError(error: unknown): AppError {
     if (error instanceof AppError) return error;
 
-    const msg = error.message || String(error);
-    const status = error.status || error.response?.status;
+    const msg = error instanceof Error ? error.message : String(error);
+    const status = (error as any)?.status || (error as any)?.response?.status;
 
-    if (error.name === 'AbortError' || msg.includes('aborted')) {
+    if (error instanceof Error && (error.name === 'AbortError' || msg.includes('aborted'))) {
       return new ApiError("Request cancelled by user.", 499);
     }
 
@@ -73,13 +95,16 @@ class GeminiService {
     return new ApiError(msg, status || 500);
   }
 
-  private async withRetry<T>(fn: () => Promise<T>, retries = this.MAX_RETRIES, delay = this.BASE_DELAY): Promise<T> {
+  /**
+   * Executes a function with exponential backoff retry logic.
+   */
+  private async withRetry<T>(fn: () => Promise<T>, retries = this.MAX_RETRIES, delay = this.BASE_DELAY_MS): Promise<T> {
     try {
       return await fn();
-    } catch (error: any) {
-      const mappedError = this.mapError(error);
+    } catch (error: unknown) {
+      const mappedError = GeminiService.mapError(error);
       
-      // Don't retry if aborted or safety error or auth error
+      // Non-retriable errors
       if (
         mappedError instanceof AuthenticationError ||
         mappedError instanceof SafetyError || 
@@ -90,12 +115,44 @@ class GeminiService {
 
       // Retry on Rate Limit (429) or Service Unavailable (503)
       if (retries > 0 && (mappedError instanceof RateLimitError || (mappedError instanceof ApiError && mappedError.statusCode === 503))) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        // Add jitter to delay
+        const jitter = Math.random() * 200;
+        await new Promise(resolve => setTimeout(resolve, delay + jitter));
         return this.withRetry(fn, retries - 1, delay * 2);
       }
       
       throw mappedError;
     }
+  }
+
+  /**
+   * Constructs the payload parts for the API request.
+   */
+  private buildParts(mainImageBase64: string, prompt: string, additionalImagesBase64: string[]): ModelPart[] {
+    const parts: ModelPart[] = [];
+
+    // 1. Main Image
+    parts.push({
+      inlineData: {
+        data: cleanBase64(mainImageBase64),
+        mimeType: getMimeType(mainImageBase64),
+      },
+    });
+
+    // 2. Additional Images
+    additionalImagesBase64.forEach((img) => {
+      parts.push({
+        inlineData: {
+          data: cleanBase64(img),
+          mimeType: getMimeType(img),
+        },
+      });
+    });
+
+    // 3. Text Prompt
+    parts.push({ text: prompt });
+
+    return parts;
   }
 
   public async generateOrEditImage(
@@ -104,79 +161,58 @@ class GeminiService {
     additionalImagesBase64: string[] = [],
     options: RequestOptions = {}
   ): Promise<string> {
-    const { signal, timeout = this.DEFAULT_TIMEOUT } = options;
+    const { signal, timeout = this.DEFAULT_TIMEOUT_MS } = options;
 
     return this.withRetry(async () => {
-      // Check abort signal before starting
       if (signal?.aborted) {
         throw new Error("Request aborted");
       }
 
       const ai = this.getClient();
-      const parts: Part[] = [];
+      const parts = this.buildParts(mainImageBase64, prompt, additionalImagesBase64);
 
-      // 1. Add Main Image
-      parts.push({
-        inlineData: {
-          data: cleanBase64(mainImageBase64),
-          mimeType: getMimeType(mainImageBase64),
-        },
-      });
-
-      // 2. Add Additional Images
-      additionalImagesBase64.forEach((img) => {
-        parts.push({
-          inlineData: {
-            data: cleanBase64(img),
-            mimeType: getMimeType(img),
-          },
-        });
-      });
-
-      // 3. Add Prompt
-      parts.push({ text: prompt });
-
-      // Create a timeout race
       const generatePromise = ai.models.generateContent({
         model: this.MODEL_NAME,
-        contents: { parts },
+        contents: { parts: parts as Part[] }, // Cast strictly compliant Part
       });
 
       const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error("Request timed out")), timeout)
       );
 
-      // Handle AbortSignal during fetch (if SDK supports it, otherwise we simulate)
+      // Handle AbortSignal race
       const abortPromise = new Promise<never>((_, reject) => {
         if (signal) {
-          signal.addEventListener('abort', () => reject(new Error("Request aborted")));
+          signal.addEventListener('abort', () => reject(new Error("Request aborted")), { once: true });
         }
       });
 
-      const response: GenerateContentResponse = await Promise.race([
-        generatePromise,
-        timeoutPromise,
-        abortPromise
-      ]);
+      try {
+        const response: GenerateContentResponse = await Promise.race([
+          generatePromise,
+          timeoutPromise,
+          abortPromise
+        ]);
 
-      // Parse the response
-      if (response.candidates && response.candidates.length > 0) {
+        if (response.candidates && response.candidates.length > 0) {
           const contentParts = response.candidates[0].content?.parts;
           if (contentParts) {
-              for (const part of contentParts) {
-                  if (part.inlineData && part.inlineData.data) {
-                    return `data:image/png;base64,${part.inlineData.data}`;
-                  }
+            for (const part of contentParts) {
+              if (part.inlineData && part.inlineData.data) {
+                return `data:image/png;base64,${part.inlineData.data}`;
               }
+            }
           }
           
-          const finishReason = response.candidates[0].finishReason;
-          if (finishReason === "SAFETY") {
+          if (response.candidates[0].finishReason === "SAFETY") {
             throw new SafetyError("Generation stopped due to safety concerns.");
           }
+        }
+        
+        throw new ApiError("No image generated. The model returned a response without image data.", 422);
+      } finally {
+        // Cleanup if necessary (listeners are mostly self-cleaning with { once: true })
       }
-      
-      throw new ApiError("No image generated. The model returned a response without image data.", 422);
     });
   }
 
@@ -186,7 +222,8 @@ class GeminiService {
     additionalImagesBase64: string[] = [],
     options: RequestOptions = {}
   ): Promise<string[]> {
-    // Execute all requests in parallel
+    // Process batch with Promise.allSettled to allow partial success,
+    // though for this UI we typically want the successful ones.
     const promises = prompts.map(prompt => 
       this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64, options)
         .catch(err => {
@@ -200,6 +237,7 @@ class GeminiService {
   }
 }
 
+// Facade exports for cleaner consumption
 export const generateOrEditImage = (
   mainImageBase64: string,
   prompt: string,

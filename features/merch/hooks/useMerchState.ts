@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { MerchProduct } from '../types';
 import { MERCH_PRODUCTS } from '../data/products';
 import { readImageFile } from '@/shared/utils/file';
@@ -20,11 +20,21 @@ export interface TextOverlayState {
 }
 
 export const useMerchController = (onImageGenerated?: (url: string, prompt: string) => void) => {
-  // State
-  const [logoImage, setLogoImage] = useState<string | null>(null);
-  const [bgImage, setBgImage] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<MerchProduct>(MERCH_PRODUCTS[0]);
-  const [stylePreference, setStylePreference] = useState('');
+  // Asset State
+  const [assets, setAssets] = useState<{ logo: string | null; bg: string | null }>({
+    logo: null,
+    bg: null
+  });
+  const [loadingAssets, setLoadingAssets] = useState<{ logo: boolean; bg: boolean }>({
+    logo: false,
+    bg: false
+  });
+
+  // Configuration State
+  const [config, setConfig] = useState<{ product: MerchProduct; style: string }>({
+    product: MERCH_PRODUCTS[0],
+    style: ''
+  });
   
   // Text Overlay State
   const [textOverlay, setTextOverlay] = useState<TextOverlayState>({
@@ -32,100 +42,76 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     font: 'Inter, sans-serif',
     color: '#ffffff',
     size: 40,
-    x: 50, // Percent
-    y: 50,  // Percent
+    x: 50,
+    y: 50,
     align: 'center',
     rotation: 0,
     opacity: 100
   });
-  
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [isUploadingBg, setIsUploadingBg] = useState(false);
+
+  // UI/Error State
   const [validationError, setValidationError] = useState<string | null>(null);
-  
-  // Variations State
   const [variations, setVariations] = useState<string[]>([]);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
   const variationsAbortController = useRef<AbortController | null>(null);
 
-  // Composition: Use GenAI hook for main generation
+  // Main Generation Hook
   const { loading, error: apiError, resultImage, generate, clearError, reset: resetGenAI } = useGenAI();
 
   // Derived State
   const activeError = validationError || apiError;
-  const errorSuggestion = activeError ? getErrorSuggestion(activeError, !!bgImage) : null;
+  const errorSuggestion = activeError ? getErrorSuggestion(activeError, !!assets.bg) : null;
 
-  // Cleanup variations on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (variationsAbortController.current) {
-        variationsAbortController.current.abort();
-      }
+      variationsAbortController.current?.abort();
     };
   }, []);
 
-  // Actions
-  const handleLogoUpload = useCallback(async (file: File) => {
-    setIsUploadingLogo(true);
+  // -- Handlers --
+
+  const handleAssetUpload = useCallback(async (file: File, type: 'logo' | 'bg') => {
+    setLoadingAssets(prev => ({ ...prev, [type]: true }));
     setValidationError(null);
-    resetGenAI();
-    setVariations([]); 
+    if (type === 'logo') {
+      resetGenAI();
+      setVariations([]);
+    }
+
     try {
       const base64 = await readImageFile(file);
-      setLogoImage(base64);
+      setAssets(prev => ({ ...prev, [type]: base64 }));
     } catch (error: any) {
       console.error(error);
-      setValidationError(error.message || "Failed to upload logo");
+      setValidationError(error.message || `Failed to upload ${type}`);
     } finally {
-      setIsUploadingLogo(false);
+      setLoadingAssets(prev => ({ ...prev, [type]: false }));
     }
   }, [resetGenAI]);
 
-  const handleBgUpload = useCallback(async (file: File) => {
-    setIsUploadingBg(true);
-    setValidationError(null);
-    setVariations([]); 
-    try {
-      const base64 = await readImageFile(file);
-      setBgImage(base64);
-    } catch (error: any) {
-      console.error(error);
-      setValidationError(error.message || "Failed to upload background");
-    } finally {
-      setIsUploadingBg(false);
+  const clearAsset = useCallback((type: 'logo' | 'bg') => {
+    setAssets(prev => ({ ...prev, [type]: null }));
+    if (type === 'logo') {
+      resetGenAI();
+      setVariations([]);
     }
-  }, []);
-
-  const clearLogo = useCallback(() => {
-    setLogoImage(null);
-    resetGenAI();
-    setVariations([]);
   }, [resetGenAI]);
-
-  const clearBg = useCallback(() => setBgImage(null), []);
-  
-  const clearActiveError = useCallback(() => {
-    setValidationError(null);
-    clearError();
-  }, [clearError]);
 
   const handleGenerate = useCallback(async () => {
-    if (!logoImage) return;
+    if (!assets.logo) return;
 
-    setVariations([]); // Clear previous variations
-    const finalPrompt = constructMerchPrompt(selectedProduct, stylePreference, !!bgImage);
-    const additionalImages: string[] = bgImage ? [bgImage] : [];
+    setVariations([]);
+    const finalPrompt = constructMerchPrompt(config.product, config.style, !!assets.bg);
+    const additionalImages: string[] = assets.bg ? [assets.bg] : [];
     
-    await generate(logoImage, finalPrompt, additionalImages);
-  }, [logoImage, bgImage, selectedProduct, stylePreference, generate]);
+    await generate(assets.logo, finalPrompt, additionalImages);
+  }, [assets, config, generate]);
 
   const handleGenerateVariations = useCallback(async () => {
-    if (!logoImage) return;
+    if (!assets.logo) return;
 
-    // Abort previous variation generation
-    if (variationsAbortController.current) {
-      variationsAbortController.current.abort();
-    }
+    variationsAbortController.current?.abort();
     const controller = new AbortController();
     variationsAbortController.current = controller;
 
@@ -133,11 +119,11 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     setValidationError(null);
 
     try {
-      const prompts = getVariationPrompts(selectedProduct, stylePreference, !!bgImage);
-      const additionalImages: string[] = bgImage ? [bgImage] : [];
+      const prompts = getVariationPrompts(config.product, config.style, !!assets.bg);
+      const additionalImages: string[] = assets.bg ? [assets.bg] : [];
       
       const results = await generateImageBatch(
-        logoImage, 
+        assets.logo, 
         prompts, 
         additionalImages,
         { signal: controller.signal }
@@ -151,55 +137,52 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
         }
       }
     } catch (err: any) {
-      if (err.name !== 'AbortError' && err.message !== 'Request aborted') {
-        console.error("Variation generation error:", err);
+      if (err.name !== 'AbortError') {
         setValidationError(err.message || "Failed to generate variations");
       }
     } finally {
       if (!controller.signal.aborted) {
         setIsGeneratingVariations(false);
-        variationsAbortController.current = null;
       }
     }
-  }, [logoImage, bgImage, selectedProduct, stylePreference]);
+  }, [assets, config]);
 
-  // Trigger callback when result changes
+  // Sync result with parent
   useEffect(() => {
     if (resultImage && onImageGenerated && !loading) {
-       const prompt = constructMerchPrompt(selectedProduct, stylePreference, !!bgImage);
+       const prompt = constructMerchPrompt(config.product, config.style, !!assets.bg);
        onImageGenerated(resultImage, prompt);
     }
-  }, [resultImage, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resultImage, loading, onImageGenerated, config, assets.bg]);
 
   return {
-    // Data
-    logoImage,
-    bgImage,
-    selectedProduct,
-    stylePreference,
+    logoImage: assets.logo,
+    bgImage: assets.bg,
+    selectedProduct: config.product,
+    stylePreference: config.style,
     resultImage,
     loading,
     variations,
     isGeneratingVariations,
     activeError,
     errorSuggestion,
-    isUploadingLogo,
-    isUploadingBg,
+    isUploadingLogo: loadingAssets.logo,
+    isUploadingBg: loadingAssets.bg,
     textOverlay,
     
-    // Setters
-    setSelectedProduct,
-    setStylePreference,
-    setVariations, 
+    setSelectedProduct: (p: MerchProduct) => setConfig(prev => ({ ...prev, product: p })),
+    setStylePreference: (s: string) => setConfig(prev => ({ ...prev, style: s })),
     setTextOverlay,
     
-    // Handlers
-    handleLogoUpload,
-    handleBgUpload,
+    handleLogoUpload: (f: File) => handleAssetUpload(f, 'logo'),
+    handleBgUpload: (f: File) => handleAssetUpload(f, 'bg'),
     handleGenerate,
     handleGenerateVariations,
-    clearLogo,
-    clearBg,
-    clearActiveError
+    clearLogo: () => clearAsset('logo'),
+    clearBg: () => clearAsset('bg'),
+    clearActiveError: useCallback(() => {
+      setValidationError(null);
+      clearError();
+    }, [clearError])
   };
 };
