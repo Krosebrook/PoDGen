@@ -119,7 +119,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
         
         <div className="flex flex-col gap-3 mt-2">
           <Tooltip 
-            content={isGenerateDisabled ? "Upload a logo to start" : "Generate high-res mockup"}
+            content={isGenerateDisabled ? "Upload a logo to start" : "Generate high-res mockup based on your settings"}
             side="top"
           >
             <div className="w-full">
@@ -142,16 +142,20 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
           {/* Explicit Variations Button */}
           {!loading && resultImage && (
-             <Button 
-                variant="secondary"
-                onClick={handleGenerateVariations}
-                loading={isGeneratingVariations}
-                loadingText="Creating Variations..."
-                icon={<Sparkles className="w-4 h-4 text-indigo-300" />}
-                className="w-full border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 shadow-sm transition-all hover:border-indigo-500/50"
-             >
-               Generate 5 Variations
-             </Button>
+             <Tooltip content="Generate 5 distinct lighting and angle variations of this design">
+               <div className="w-full">
+                 <Button 
+                    variant="secondary"
+                    onClick={handleGenerateVariations}
+                    loading={isGeneratingVariations}
+                    loadingText="Creating Variations..."
+                    icon={<Sparkles className="w-4 h-4 text-indigo-300" />}
+                    className="w-full border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 shadow-sm transition-all hover:border-indigo-500/50"
+                 >
+                   Generate 5 Variations
+                 </Button>
+               </div>
+             </Tooltip>
           )}
         </div>
       </div>
@@ -165,22 +169,25 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
             
             {/* View Mode Toggle */}
             <div className="bg-slate-800 p-1 rounded-lg flex border border-slate-700">
-               <button
-                  onClick={() => setViewMode('2D')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '2D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-               >
-                  <ImageIcon className="w-4 h-4" />
-                  AI Mockup
-               </button>
-               <button
-                  onClick={() => setViewMode('3D')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '3D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                  disabled={!logoImage}
-                  title={!logoImage ? "Upload a logo first" : ""}
-               >
-                  <Box className="w-4 h-4" />
-                  3D View
-               </button>
+               <Tooltip content="View AI-generated 2D mockup">
+                 <button
+                    onClick={() => setViewMode('2D')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '2D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                 >
+                    <ImageIcon className="w-4 h-4" />
+                    AI Mockup
+                 </button>
+               </Tooltip>
+               <Tooltip content={!logoImage ? "Upload a logo first" : "View logo on interactive 3D model"}>
+                 <button
+                    onClick={() => setViewMode('3D')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === '3D' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                    disabled={!logoImage}
+                 >
+                    <Box className="w-4 h-4" />
+                    3D View
+                 </button>
+               </Tooltip>
             </div>
          </div>
 

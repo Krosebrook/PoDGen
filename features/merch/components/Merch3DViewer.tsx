@@ -1,9 +1,9 @@
 
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stage, useTexture, Float, Decal, RenderTexture, PerspectiveCamera, Text } from '@react-three/drei';
+import { OrbitControls, Stage, useTexture, Float, Decal } from '@react-three/drei';
+import { EffectComposer, N8AO } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import { Spinner } from '@/shared/components/ui';
 
 interface Merch3DViewerProps {
   logo: string;
@@ -111,11 +111,23 @@ export const Merch3DViewer: React.FC<Merch3DViewerProps> = ({ logo, productName 
                <ProductMesh logo={logo} shape={shape} />
             </Float>
           </Stage>
+          
+          <EffectComposer>
+            <N8AO 
+              halfRes 
+              color="black" 
+              aoRadius={2} 
+              intensity={1} 
+              distanceFalloff={2} 
+              screenSpaceRadius={true}
+            />
+          </EffectComposer>
+
           <OrbitControls autoRotate autoRotateSpeed={0.5} makeDefault />
         </Suspense>
       </Canvas>
       
-      {/* Loading Overlay (handled by Suspense fallback usually, but explicit here for initial load) */}
+      {/* Loading Overlay */}
       <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-mono backdrop-blur-md pointer-events-none">
         3D Inspector • {shape.toUpperCase()}
       </div>

@@ -75,27 +75,30 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
              
              {/* Alignment Group */}
              <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 gap-0.5 shrink-0">
-                <button
-                  onClick={() => handleChange('align', 'left')}
-                  className={`p-1.5 rounded transition-colors ${overlay.align === 'left' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                  title="Align Left"
-                >
-                  <AlignLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleChange('align', 'center')}
-                  className={`p-1.5 rounded transition-colors ${overlay.align === 'center' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                   title="Align Center"
-                >
-                  <AlignCenter className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleChange('align', 'right')}
-                  className={`p-1.5 rounded transition-colors ${overlay.align === 'right' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                   title="Align Right"
-                >
-                  <AlignRight className="w-4 h-4" />
-                </button>
+                <Tooltip content="Align Left">
+                  <button
+                    onClick={() => handleChange('align', 'left')}
+                    className={`p-1.5 rounded transition-colors ${overlay.align === 'left' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    <AlignLeft className="w-4 h-4" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Align Center">
+                  <button
+                    onClick={() => handleChange('align', 'center')}
+                    className={`p-1.5 rounded transition-colors ${overlay.align === 'center' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    <AlignCenter className="w-4 h-4" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Align Right">
+                  <button
+                    onClick={() => handleChange('align', 'right')}
+                    className={`p-1.5 rounded transition-colors ${overlay.align === 'right' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    <AlignRight className="w-4 h-4" />
+                  </button>
+                </Tooltip>
              </div>
            </div>
         </div>
@@ -106,13 +109,13 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
            <div className="bg-slate-900 border border-slate-700 rounded-lg p-2 space-y-2">
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => handleChange('color', c)}
-                    className={`w-6 h-6 rounded-full border border-slate-600 transition-transform hover:scale-110 ${overlay.color === c ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : ''}`}
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
+                  <Tooltip key={c} content={`Select ${c}`}>
+                    <button
+                      onClick={() => handleChange('color', c)}
+                      className={`w-6 h-6 rounded-full border border-slate-600 transition-transform hover:scale-110 ${overlay.color === c ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : ''}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  </Tooltip>
                 ))}
                 <div className="w-px h-6 bg-slate-700 mx-1"></div>
                 <div className="relative">
@@ -122,12 +125,13 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
                     onChange={(e) => handleChange('color', e.target.value)}
                     className="w-6 h-6 opacity-0 absolute inset-0 cursor-pointer"
                   />
-                  <div 
-                    className="w-6 h-6 rounded-full border border-slate-600 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 text-slate-400 hover:text-white"
-                    title="Custom Color"
-                  >
-                    <Palette className="w-3 h-3" />
-                  </div>
+                  <Tooltip content="Choose custom color">
+                    <div 
+                      className="w-6 h-6 rounded-full border border-slate-600 flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-800 text-slate-400 hover:text-white"
+                    >
+                      <Palette className="w-3 h-3" />
+                    </div>
+                  </Tooltip>
                 </div>
               </div>
            </div>
