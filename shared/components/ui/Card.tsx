@@ -1,21 +1,43 @@
+
 import React from 'react';
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
   title?: string;
+  subtitle?: string;
   action?: React.ReactNode;
   noPadding?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = "", title, action, noPadding = false }) => (
-  <div className={`bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-sm ${className}`}>
+export const Card: React.FC<CardProps> = ({ 
+  children, 
+  className = "", 
+  title, 
+  subtitle,
+  action, 
+  noPadding = false 
+}) => (
+  <article className={`bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl ${className}`}>
     {(title || action) && (
-      <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between bg-slate-800/30">
-        {title && <h3 className="font-semibold text-slate-200">{title}</h3>}
-        {action && <div>{action}</div>}
-      </div>
+      <header className="px-6 py-5 border-b border-slate-800/50 flex items-center justify-between bg-slate-900/50 backdrop-blur-sm">
+        <div className="flex flex-col gap-1 min-w-0">
+          {title && (
+            <h3 className="text-sm font-black text-white uppercase tracking-widest truncate">
+              {title}
+            </h3>
+          )}
+          {subtitle && (
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {action && <div className="shrink-0 ml-4">{action}</div>}
+      </header>
     )}
-    <div className={noPadding ? "" : "p-6"}>{children}</div>
-  </div>
+    <div className={noPadding ? "" : "p-6"}>
+      {children}
+    </div>
+  </article>
 );

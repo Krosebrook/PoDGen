@@ -23,13 +23,12 @@ export class AppError extends Error {
   ) {
     super(message);
     this.name = 'AppError';
-    // Restore prototype chain for instanceof checks
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, public readonly fields?: Record<string, string[]>) {
+  constructor(message: string, fields?: Record<string, string[]>) {
     super(message, ErrorCode.VALIDATION_ERROR, 400, { fields });
     this.name = 'ValidationError';
   }

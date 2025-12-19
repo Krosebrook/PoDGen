@@ -7,11 +7,12 @@ import { useCanvasTransform } from '../hooks/useCanvasTransform';
 interface EditorCanvasProps {
   loading: boolean;
   resultImage: string | null;
+  selectedImage?: string | null;
   error: string | null;
   onRetry: () => void;
 }
 
-export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage, error, onRetry }) => {
+export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage, selectedImage, error, onRetry }) => {
   const {
     scale,
     position,
@@ -26,29 +27,33 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage
     reset
   } = useCanvasTransform();
 
+  const activeImage = resultImage || selectedImage;
+
   // Reset zoom when image changes
   useEffect(() => {
-    if (resultImage) {
+    if (activeImage) {
       reset();
     }
-  }, [resultImage, reset]);
+  }, [activeImage, reset]);
 
   return (
     <div className={`flex flex-col h-full bg-slate-900 rounded-2xl border overflow-hidden relative transition-colors ${error ? 'border-red-900/30' : 'border-slate-700'}`}>
        {/* Canvas Header */}
        <div className="absolute top-0 left-0 right-0 h-12 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 flex items-center px-4 justify-between z-10">
           <span className="text-slate-400 font-medium flex items-center gap-2">
-            <ImageIcon className="w-4 h-4" /> Result
+            <ImageIcon className="w-4 h-4" /> {resultImage ? 'Generated Result' : (selectedImage ? 'Source Preview' : 'Canvas')}
           </span>
-          {resultImage && (
+          {activeImage && (
             <div className="flex items-center gap-3">
                  <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">
                     <Move className="w-3 h-3" />
                     <span className="hidden sm:inline">Drag to Pan</span>
                  </div>
-                 <a href={resultImage} download={`edited-${Date.now()}.png`} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium">
-                   <Download className="w-4 h-4" /> Save
-                 </a>
+                 {resultImage && (
+                   <a href={resultImage} download={`edited-${Date.now()}.png`} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm font-medium">
+                     <Download className="w-4 h-4" /> Save
+                   </a>
+                 )}
             </div>
           )}
        </div>
@@ -56,13 +61,13 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage
        {/* Canvas Body */}
        <div 
          className={`flex-1 w-full h-full overflow-hidden bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-opacity-5 relative
-            ${resultImage ? 'cursor-move' : ''}
+            ${activeImage ? 'cursor-move' : ''}
          `}
-         onMouseDown={resultImage ? handleMouseDown : undefined}
-         onMouseMove={resultImage ? handleMouseMove : undefined}
-         onMouseUp={resultImage ? handleMouseUp : undefined}
-         onMouseLeave={resultImage ? handleMouseUp : undefined}
-         onWheel={resultImage ? handleWheel : undefined}
+         onMouseDown={activeImage ? handleMouseDown : undefined}
+         onMouseMove={activeImage ? handleMouseMove : undefined}
+         onMouseUp={activeImage ? handleMouseUp : undefined}
+         onMouseLeave={activeImage ? handleMouseUp : undefined}
+         onWheel={activeImage ? handleWheel : undefined}
        >
           <div className="w-full h-full flex items-center justify-center">
              {loading ? (
@@ -70,14 +75,14 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage
                   <Spinner className="w-12 h-12 text-blue-500 mx-auto mb-4" />
                   <p className="text-slate-400 animate-pulse font-light">Gemini is processing...</p>
                 </div>
-              ) : resultImage ? (
+              ) : activeImage ? (
                 <div 
                     className="transition-transform duration-75 ease-out w-full h-full flex items-center justify-center p-4 will-change-transform"
                     style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${scale})` }}
                 >
                     <img 
-                        src={resultImage} 
-                        alt="Edited Result" 
+                        src={activeImage} 
+                        alt="Canvas Content" 
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl pointer-events-none select-none" 
                     />
                 </div>
@@ -99,7 +104,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({ loading, resultImage
           </div>
 
           {/* Zoom Controls Overlay */}
-          {resultImage && !loading && (
+          {activeImage && !loading && (
              <div 
                className="absolute bottom-4 right-4 flex items-center gap-2 bg-slate-800/90 backdrop-blur border border-slate-700 p-1.5 rounded-lg shadow-xl z-20"
                onMouseDown={(e) => e.stopPropagation()} // Prevent dragging when clicking controls

@@ -1,135 +1,171 @@
 
-import React, { Suspense, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stage, useTexture, Float, Decal } from '@react-three/drei';
-import { EffectComposer, N8AO } from '@react-three/postprocessing';
+import React, { Suspense, useRef, useMemo } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Stage, useTexture, Float, Decal, ContactShadows, PerspectiveCamera, Environment } from '@react-three/drei';
+import { EffectComposer, N8AO, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import { Spinner } from '@/shared/components/ui/Spinner';
 
 interface Merch3DViewerProps {
   logo: string;
   productName: string;
 }
 
-// Helper to infer shape from product name
 const getProductShape = (name: string): 'cylinder' | 'box' | 'plane' | 'disk' => {
   const n = name.toLowerCase();
   if (n.includes('mug') || n.includes('bottle') || n.includes('tumbler') || n.includes('cup') || n.includes('can')) return 'cylinder';
   if (n.includes('sticker') || n.includes('coaster') || n.includes('pin') || n.includes('button')) return 'disk';
   if (n.includes('poster') || n.includes('canvas') || n.includes('art') || n.includes('print')) return 'plane';
-  return 'box'; // Default for shirts (folded), hoodies, packaging, generic
+  return 'box'; 
 };
 
 const ProductMesh: React.FC<{ logo: string; shape: string }> = ({ logo, shape }) => {
   const texture = useTexture(logo);
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Rotate mesh slowly
   useFrame((state) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.002;
+      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.4) * 0.05;
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.8) * 0.02;
     }
   });
 
-  const materialProps = {
+  const materialProps = useMemo(() => ({
     color: "#ffffff",
-    roughness: 0.5,
-    metalness: 0.1,
-  };
+    roughness: 0.15,
+    metalness: 0.05,
+    envMapIntensity: 1.5,
+  }), []);
 
-  // Center the texture
-  texture.center.set(0.5, 0.5);
+  useMemo(() => {
+    texture.center.set(0.5, 0.5);
+    texture.anisotropy = 16;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+  }, [texture]);
 
-  switch (shape) {
-    case 'cylinder':
-      return (
-        <mesh ref={meshRef} castShadow receiveShadow>
-          <cylinderGeometry args={[0.8, 0.8, 2.2, 32]} />
-          <meshStandardMaterial {...materialProps} />
-          <Decal 
-            position={[0, 0, 0.8]} 
-            rotation={[0, 0, 0]} 
-            scale={[1, 1, 1]} 
-            map={texture} 
-          />
-        </mesh>
-      );
-    case 'disk':
-        return (
-          <mesh ref={meshRef} castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[1, 1, 0.1, 32]} />
-            <meshStandardMaterial {...materialProps} />
-            <Decal 
-              position={[0, 0.06, 0]} 
-              rotation={[-Math.PI / 2, 0, 0]} 
-              scale={[1.2, 1.2, 1.2]} 
-              map={texture} 
-            />
-          </mesh>
-        );
-    case 'plane':
-        return (
-          <mesh ref={meshRef} castShadow receiveShadow>
-            <boxGeometry args={[2, 2.8, 0.05]} />
-            <meshStandardMaterial {...materialProps} />
-            <Decal 
-              position={[0, 0, 0.03]} 
-              rotation={[0, 0, 0]} 
-              scale={[1.5, 1.5, 1.5]} 
-              map={texture} 
-            />
-          </mesh>
-        );
-    default: // Box
-      return (
-        <mesh ref={meshRef} castShadow receiveShadow>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshStandardMaterial {...materialProps} />
-          <Decal 
-            position={[0, 0, 1]} 
-            rotation={[0, 0, 0]} 
-            scale={[1.2, 1.2, 1.2]} 
-            map={texture} 
-          />
-        </mesh>
-      );
-  }
+  const decalScale = useMemo(() => {
+    switch(shape) {
+      case 'cylinder': return [1.2, 1.2, 1.2];
+      case 'disk': return [1.4, 1.4, 1.4];
+      case 'plane': return [1.8, 1.8, 1.8];
+      default: return [1.5, 1.5, 1.5];
+    }
+  }, [shape]);
+
+  return (
+    <mesh ref={meshRef} castShadow receiveShadow>
+      {shape === 'cylinder' && <cylinderGeometry args={[0.9, 0.9, 2.4, 64]} />}
+      {shape === 'disk' && <cylinderGeometry args={[1, 1, 0.1, 64]} />}
+      {shape === 'plane' && <boxGeometry args={[2, 2.8, 0.05]} />}
+      {shape === 'box' && <boxGeometry args={[2.2, 2.2, 0.5]} />}
+      
+      <meshStandardMaterial {...materialProps} />
+      
+      <Decal 
+        position={shape === 'disk' ? [0, 0.06, 0] : [0, 0, shape === 'cylinder' ? 0.91 : (shape === 'box' ? 0.26 : 0.03)]} 
+        rotation={shape === 'disk' ? [-Math.PI / 2, 0, 0] : [0, 0, 0]} 
+        scale={decalScale as [number, number, number]} 
+      >
+        <meshStandardMaterial 
+          map={texture} 
+          transparent 
+          polygonOffset 
+          polygonOffsetFactor={-10} 
+          roughness={0.2}
+          metalness={0.1}
+        />
+      </Decal>
+    </mesh>
+  );
 };
 
 export const Merch3DViewer: React.FC<Merch3DViewerProps> = ({ logo, productName }) => {
   const shape = getProductShape(productName);
 
   return (
-    <div className="w-full h-full relative bg-slate-900 rounded-lg overflow-hidden">
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 4], fov: 50 }}>
+    <div className="w-full h-full relative bg-[#05070a] rounded-[2.5rem] overflow-hidden group cursor-grab active:cursor-grabbing">
+      <Canvas shadows dpr={[1, 2]} gl={{ antialias: true }}>
+        <PerspectiveCamera makeDefault position={[0, 1, 6]} fov={35} />
+        
         <Suspense fallback={null}>
-          <Stage environment="city" intensity={0.6} castShadow={false}>
+          <Stage 
+            environment="studio" 
+            intensity={0.8} 
+            contactShadow={false}
+            adjustCamera={false}
+            preset="rembrandt"
+          >
             <Float
                speed={2} 
-               rotationIntensity={0.5} 
-               floatIntensity={0.5} 
+               rotationIntensity={0.2} 
+               floatIntensity={0.3} 
             >
                <ProductMesh logo={logo} shape={shape} />
             </Float>
           </Stage>
           
-          <EffectComposer>
+          <ContactShadows 
+            opacity={0.6} 
+            scale={12} 
+            blur={3} 
+            far={5} 
+            resolution={512} 
+            color="#000000" 
+            position={[0, -1.5, 0]}
+          />
+
+          <Environment preset="city" blur={1} />
+
+          <EffectComposer disableNormalPass multisampling={4}>
             <N8AO 
               halfRes 
               color="black" 
               aoRadius={2} 
-              intensity={1} 
-              distanceFalloff={2} 
-              screenSpaceRadius={true}
+              intensity={2} 
             />
+            <Bloom 
+              luminanceThreshold={1.2} 
+              mipmapBlur 
+              intensity={0.4} 
+              radius={0.3} 
+            />
+            <Noise opacity={0.02} />
+            <Vignette eskil={false} offset={0.1} darkness={1.1} />
           </EffectComposer>
 
-          <OrbitControls autoRotate autoRotateSpeed={0.5} makeDefault />
+          <OrbitControls 
+            enableDamping 
+            dampingFactor={0.08}
+            minDistance={3}
+            maxDistance={10}
+            autoRotate
+            autoRotateSpeed={0.5}
+            enablePan={false}
+          />
         </Suspense>
       </Canvas>
       
-      {/* Loading Overlay */}
-      <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-mono backdrop-blur-md pointer-events-none">
-        3D Inspector • {shape.toUpperCase()}
+      {/* UI Overlays */}
+      <div className="absolute top-8 right-8 flex flex-col items-end gap-3 pointer-events-none">
+        <div className="bg-blue-600 px-5 py-2 rounded-full shadow-[0_0_30px_rgba(37,99,235,0.4)] border border-blue-400/30">
+          <span className="text-[10px] font-black tracking-[0.3em] text-white uppercase">Interactive 3D</span>
+        </div>
+        <div className="bg-slate-900/60 backdrop-blur-md text-[9px] font-bold text-slate-400 px-4 py-1.5 rounded-xl border border-slate-800 uppercase tracking-widest">
+          Geometry: {shape}
+        </div>
+      </div>
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8 bg-black/40 backdrop-blur-2xl px-8 py-3 rounded-2xl border border-white/5 opacity-0 group-hover:opacity-100 transition-all duration-700 shadow-2xl scale-95 group-hover:scale-100">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+          <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Orbit</span>
+        </div>
+        <div className="w-px h-4 bg-white/10" />
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
+          <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Zoom</span>
+        </div>
       </div>
     </div>
   );

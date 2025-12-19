@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Spinner, Button, Tooltip } from '@/shared/components/ui';
-import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles } from 'lucide-react';
+import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles, ChevronLeft, ChevronRight, Move } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
 import { TextOverlayState } from '../hooks/useMerchState';
@@ -49,28 +49,27 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     setIsExporting(true);
     const filename = `merch-${productId}-${Date.now()}`;
     try {
-      await saveImage(img, filename, exportFormat, 1, textOverlay);
+      await saveImage(img, filename, exportFormat, 2, textOverlay);
     } catch (err) {
       console.error(err);
-      alert("Failed to export image. Please try again.");
+      alert("Failed to export image. Check console for details.");
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleTextDragStart = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return;
     e.preventDefault();
     setIsDraggingText(true);
+    document.body.style.cursor = 'grabbing';
   };
 
-  const handleTextDragMove = useCallback((e: React.MouseEvent) => {
+  const handleTextDragMove = useCallback((e: MouseEvent) => {
     if (!isDraggingText || !containerRef.current || !onTextOverlayChange || !textOverlay) return;
     
-    // Throttle updates using requestAnimationFrame to prevent layout thrashing
     if (rafRef.current) return;
 
-    // Capture values needed for calculation
     const clientX = e.clientX;
     const clientY = e.clientY;
     const rect = containerRef.current.getBoundingClientRect();
@@ -88,147 +87,209 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     });
   }, [isDraggingText, onTextOverlayChange, textOverlay]);
 
-  const handleTextDragEnd = () => {
+  const handleTextDragEnd = useCallback(() => {
     setIsDraggingText(false);
+    document.body.style.cursor = '';
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingText) {
+      window.addEventListener('mousemove', handleTextDragMove);
+      window.addEventListener('mouseup', handleTextDragEnd);
+    } else {
+      window.removeEventListener('mousemove', handleTextDragMove);
+      window.removeEventListener('mouseup', handleTextDragEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleTextDragMove);
+      window.removeEventListener('mouseup', handleTextDragEnd);
+    };
+  }, [isDraggingText, handleTextDragMove, handleTextDragEnd]);
+
+  const getTransform = (align: string = 'center', rotation: number = 0) => {
+    let xOffset = '-50%';
+    if (align === 'left') xOffset = '0%';
+    if (align === 'right') xOffset = '-100%';
+    
+    return `translate(${xOffset}, -50%) rotate(${rotation}deg)`;
   };
 
-  const getTransform = (align: string = 'center') => {
-    switch (align) {
-      case 'left': return 'translate(0, -50%)'; 
-      case 'right': return 'translate(-100%, -50%)';
-      default: return 'translate(-50%, -50%)';
+  const getBgStyle = () => {
+    if (!textOverlay?.bgEnabled) return {};
+    
+    const hex = textOverlay.bgColor;
+    const opacity = (textOverlay.bgOpacity ?? 50) / 100;
+    
+    // Convert hex to rgba
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 7) {
+      r = parseInt(hex.slice(1, 3), 16);
+      g = parseInt(hex.slice(3, 5), 16);
+      b = parseInt(hex.slice(5, 7), 16);
     }
+
+    return {
+      backgroundColor: `rgba(${r}, ${g}, ${b}, ${opacity})`,
+      padding: `${textOverlay.bgPadding ?? 16}px`,
+      borderRadius: `${textOverlay.bgRounding ?? 8}px`,
+    };
   };
 
   return (
     <div 
-      className="flex flex-col h-full gap-4"
-      onMouseMove={handleTextDragMove}
-      onMouseUp={handleTextDragEnd}
-      onMouseLeave={handleTextDragEnd}
+      className="flex flex-col h-full gap-6 p-1"
       role="region"
-      aria-label="Merch Preview Area"
+      aria-label="Merch Preview Workspace"
     >
-      {/* Main Preview Area */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 p-1 relative overflow-hidden flex flex-col flex-1 min-h-[400px]">
-        {/* Status Badge */}
-        <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white flex items-center gap-2">
-          <span>{productName} Preview</span>
-          {stylePreference && <span className="text-slate-400 border-l border-white/20 pl-2">{stylePreference}</span>}
+      <div className="bg-slate-900 rounded-[2.5rem] border border-slate-800 p-0.5 relative overflow-hidden flex flex-col flex-1 shadow-2xl">
+        {/* Dynamic Context Overlays */}
+        <div className="absolute top-6 left-6 z-20 flex flex-wrap items-center gap-2">
+          <div className="bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-[0.25em] text-white shadow-2xl">
+            {productName}
+          </div>
+          {stylePreference && (
+            <div className="bg-blue-600/30 backdrop-blur-xl px-4 py-2 rounded-full border border-blue-500/30 text-[9px] font-black uppercase tracking-[0.25em] text-blue-400 shadow-2xl">
+              {stylePreference}
+            </div>
+          )}
         </div>
 
-        {/* Canvas */}
         <div 
            ref={containerRef}
-           className="flex-1 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 relative overflow-hidden"
+           className="flex-1 flex items-center justify-center bg-[#070b14] relative overflow-hidden group/canvas"
         >
           {loading ? (
-            <div className="flex flex-col items-center">
-              <Spinner className="w-16 h-16 text-indigo-500 mb-6" />
-              <p className="text-xl text-slate-300 font-light tracking-wide animate-pulse">Designing your {productName}...</p>
+            <div className="flex flex-col items-center gap-8 animate-pulse">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 animate-pulse" />
+                <Spinner className="w-20 h-20 text-blue-500 relative" />
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-2xl text-white font-black tracking-tight uppercase">Rendering Mockup</p>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.3em] max-w-[200px] mx-auto leading-relaxed">
+                  Synthesizing lighting for {productName}
+                </p>
+              </div>
             </div>
           ) : activeImage ? (
-            <div className="relative max-w-full max-h-full flex items-center justify-center">
-              <img src={activeImage} alt="Merch Mockup" className="max-w-full max-h-full object-contain rounded shadow-2xl animate-fadeIn" />
+            <div className="relative w-full h-full flex items-center justify-center p-12 select-none group/image">
+              <img 
+                src={activeImage} 
+                alt={`${productName} mockup`}
+                className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_50px_120px_rgba(0,0,0,0.9)] animate-fadeIn transition-all duration-700" 
+              />
               
-              {/* Text Overlay */}
+              {/* Floating Text Component */}
               {textOverlay && textOverlay.text && (
                  <div
                    onMouseDown={handleTextDragStart}
-                   className={`absolute cursor-move select-none whitespace-pre-wrap z-20 ${isDraggingText ? 'opacity-80' : ''}`}
-                   role="button"
-                   aria-label="Draggable text overlay"
+                   className={`
+                    absolute cursor-grab active:cursor-grabbing select-none whitespace-pre-wrap z-30 transition-all 
+                    ${isDraggingText ? 'ring-2 ring-blue-500 rounded-lg p-2 bg-blue-500/10 scale-105' : 'hover:ring-1 hover:ring-white/30 rounded p-1'}
+                   `}
                    style={{
                      left: `${textOverlay.x}%`,
                      top: `${textOverlay.y}%`,
-                     transform: `${getTransform(textOverlay.align)} rotate(${textOverlay.rotation || 0}deg)`,
+                     transform: getTransform(textOverlay.align, textOverlay.rotation),
                      fontFamily: textOverlay.font,
                      fontSize: `${textOverlay.size}px`,
                      color: textOverlay.color,
-                     textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                     textShadow: textOverlay.bgEnabled ? 'none' : '0 4px 20px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.4)',
                      textAlign: textOverlay.align,
                      opacity: (textOverlay.opacity !== undefined ? textOverlay.opacity : 100) / 100,
-                     lineHeight: '1.2'
+                     lineHeight: '1.2',
+                     transformOrigin: 'center center',
+                     ...getBgStyle()
                    }}
                  >
                    {textOverlay.text}
-                   <div className="absolute inset-[-4px] border border-transparent hover:border-blue-400/50 rounded pointer-events-none transition-colors" />
+                   
+                   {/* Drag Handle Indicator (Visible on Hover) */}
+                   {!isDraggingText && (
+                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/image:opacity-100 transition-opacity bg-blue-600 text-white p-1 rounded-full shadow-lg">
+                       <Move className="w-3 h-3" />
+                     </div>
+                   )}
                  </div>
               )}
             </div>
           ) : error ? (
-            <div className="text-center opacity-90 max-w-md px-6 animate-fadeIn">
-              <div className="bg-red-500/10 p-6 rounded-full inline-block mb-4">
-                <AlertCircle className="w-12 h-12 text-red-400" />
+            <div className="text-center max-w-md px-12 animate-fadeIn">
+              <div className="bg-red-500/10 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-10 border border-red-500/20 shadow-[0_0_80px_rgba(239,68,68,0.15)] rotate-3">
+                <AlertCircle className="w-12 h-12 text-red-500" />
               </div>
-              <h2 className="text-xl font-bold text-red-400">Generation Failed</h2>
-              <p className="text-slate-400 mt-2 mb-4">{error}</p>
+              <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tighter">System Interrupt</h2>
+              <p className="text-slate-400 font-medium mb-10 leading-relaxed text-sm">{error}</p>
               {errorSuggestion && (
-                 <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-left flex gap-3">
-                   <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0" />
+                 <div className="bg-slate-800/80 backdrop-blur-2xl border border-slate-700/50 rounded-3xl p-6 text-left flex gap-5 shadow-2xl ring-1 ring-white/5">
+                   <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20">
+                     <Lightbulb className="w-6 h-6 text-amber-500" />
+                   </div>
                    <div>
-                     <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">Suggestion</span>
-                     <p className="text-sm text-slate-400 mt-1">{errorSuggestion}</p>
+                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Proposed Fix</span>
+                     <p className="text-xs text-slate-300 font-bold leading-relaxed">{errorSuggestion}</p>
                    </div>
                  </div>
               )}
             </div>
           ) : (
-            <div className="text-center opacity-30">
-              <ShoppingBag className="w-32 h-32 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold">Ready to Design</h2>
-              <p>Upload a logo and select a product to begin</p>
+            <div className="text-center group select-none animate-fadeIn">
+              <div className="relative mb-10">
+                <div className="absolute inset-0 bg-blue-500 blur-[120px] opacity-10 animate-pulse" />
+                <div className="w-40 h-40 bg-slate-800/30 rounded-full border border-white/5 flex items-center justify-center backdrop-blur-sm relative group-hover:scale-110 transition-transform duration-700">
+                  <ShoppingBag className="w-16 h-16 text-slate-700 transition-colors duration-700 group-hover:text-blue-500/40" />
+                </div>
+              </div>
+              <h2 className="text-4xl font-black text-slate-700 uppercase tracking-tighter mb-3 group-hover:text-slate-500 transition-colors">Studio Idle</h2>
+              <p className="text-slate-600 font-black uppercase tracking-[0.4em] text-[10px]">Awaiting render parameters</p>
             </div>
           )}
         </div>
 
-        {/* Toolbar */}
         {activeImage && (
-          <div className="p-4 bg-slate-800 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
+          <div className="p-8 bg-slate-900/80 backdrop-blur-3xl border-t border-slate-800/50 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-5">
                {!loading && !isGeneratingVariations && (
-                 <Tooltip content={variations.length > 0 ? "Regenerate variations" : "Create 3 unique AI variations"} side="top">
+                 <Tooltip content="Request alternative camera angles and environments">
                    <button
                      onClick={onGenerateVariations}
-                     className="text-xs flex items-center gap-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-full transition-all"
+                     className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 px-6 py-3 rounded-2xl transition-all shadow-xl active:scale-95 group"
                    >
-                     <Sparkles className="w-3 h-3" /> 
-                     {variations.length > 0 ? 'Regenerate Variations' : 'Generate 3 Variations'}
+                     <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" /> 
+                     {variations.length > 0 ? 'Reshuffle takes' : 'Render Multi-Takes'}
                    </button>
                  </Tooltip>
                )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700 hidden sm:flex">
-                <Tooltip content="Set export format to PNG">
-                  <button
-                    onClick={() => setExportFormat('png')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${exportFormat === 'png' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                  >PNG</button>
-                </Tooltip>
-                <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                <Tooltip content="Set export format to JPG">
-                  <button
-                    onClick={() => setExportFormat('jpg')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${exportFormat === 'jpg' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                  >JPG</button>
-                </Tooltip>
+            <div className="flex items-center gap-5">
+              <div className="flex items-center bg-slate-950/80 rounded-2xl p-1.5 border border-slate-800 shadow-inner">
+                {['png', 'jpg'].map(fmt => (
+                  <Tooltip key={fmt} content={`Set export format to ${fmt.toUpperCase()}`}>
+                    <button
+                      onClick={() => setExportFormat(fmt as ExportFormat)}
+                      className={`px-5 py-2 rounded-xl text-[10px] font-black tracking-[0.2em] transition-all ${exportFormat === fmt ? 'bg-slate-800 text-white shadow-xl ring-1 ring-white/10' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      {fmt.toUpperCase()}
+                    </button>
+                  </Tooltip>
+                ))}
               </div>
 
-              <Tooltip content="Save high-quality image" side="left">
+              <Tooltip content="Export high-fidelity master for production" side="left">
                 <Button
                   onClick={() => handleExport(activeImage)}
                   loading={isExporting}
-                  loadingText="Saving..."
-                  className="py-2 h-auto text-sm"
+                  loadingText="Exporting..."
+                  className="py-3.5 h-auto text-[11px] px-10 shadow-2xl shadow-blue-600/20 uppercase tracking-[0.2em]"
+                  variant="indigo"
                   icon={<Download className="w-4 h-4" />}
                 >
-                  Export
+                  Download Master
                 </Button>
               </Tooltip>
             </div>

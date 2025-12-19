@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useId, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
@@ -15,15 +15,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
   children, 
   side = 'top', 
   className = '',
-  delay = 200
+  delay = 300
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
+  const tooltipId = useId();
 
   const handleMouseEnter = () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = window.setTimeout(() => setIsVisible(true), delay);
   };
 
@@ -35,18 +36,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setIsVisible(false);
   };
 
-  // Update position logic
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const scrollY = window.scrollY;
       const scrollX = window.scrollX;
-      const gap = 8; 
+      const gap = 12; 
 
       let top = 0;
       let left = 0;
 
-      // Basic positioning
       switch (side) {
         case 'top':
           top = rect.top + scrollY - gap;
@@ -68,22 +67,21 @@ export const Tooltip: React.FC<TooltipProps> = ({
       
       setCoords({ top, left });
     }
-  };
+  }, [side]);
 
   useLayoutEffect(() => {
     if (isVisible) {
       updatePosition();
-      // Add listeners for scroll/resize to keep tooltip attached
-      window.addEventListener('scroll', updatePosition);
+      const options = { passive: true };
+      window.addEventListener('scroll', updatePosition, options);
       window.addEventListener('resize', updatePosition);
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
-    return () => {
-      window.removeEventListener('scroll', updatePosition);
-      window.removeEventListener('resize', updatePosition);
-    };
-  }, [isVisible, side]);
+  }, [isVisible, updatePosition]);
 
-  // Transform classes for centering
   const transformClass = {
     top: '-translate-x-1/2 -translate-y-full',
     bottom: '-translate-x-1/2',
@@ -95,34 +93,37 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <>
       <div 
         ref={triggerRef}
-        className={className}
+        className={`inline-block outline-none focus-within:ring-2 focus-within:ring-blue-500/20 rounded-lg ${className}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onFocus={handleMouseEnter}
         onBlur={handleMouseLeave}
-        role="tooltip"
-        aria-hidden={!isVisible}
+        aria-describedby={isVisible ? tooltipId : undefined}
       >
         {children}
       </div>
-      {isVisible && createPortal(
+      {isVisible && typeof document !== 'undefined' && createPortal(
         <div 
-          ref={tooltipRef}
+          id={tooltipId}
+          role="tooltip"
           style={{ 
             top: coords.top, 
             left: coords.left,
             position: 'absolute'
           }}
-          className={`z-[9999] px-2.5 py-1.5 text-xs font-medium text-slate-100 bg-slate-900 border border-slate-700 rounded-md shadow-xl pointer-events-none animate-fadeIn whitespace-nowrap ${transformClass[side]}`}
+          className={`
+            z-[9999] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-100 bg-slate-900 border border-slate-700
+            rounded-2xl shadow-2xl pointer-events-none animate-fadeIn whitespace-nowrap backdrop-blur-xl bg-opacity-95
+            ${transformClass[side]}
+          `}
         >
           {content}
-          {/* Simple CSS Arrow */}
-          <div className={`absolute w-2 h-2 bg-slate-900 border-slate-700 rotate-45 transform
+          <div className={`absolute w-2.5 h-2.5 bg-slate-900 border-slate-700 rotate-45 transform
             ${side === 'top' ? 'border-r border-b bottom-[-5px] left-1/2 -translate-x-1/2' : ''}
             ${side === 'bottom' ? 'border-l border-t top-[-5px] left-1/2 -translate-x-1/2' : ''}
             ${side === 'left' ? 'border-r border-t right-[-5px] top-1/2 -translate-y-1/2' : ''}
             ${side === 'right' ? 'border-l border-b left-[-5px] top-1/2 -translate-y-1/2' : ''}
-          `} />
+          `} aria-hidden="true" />
         </div>,
         document.body
       )}

@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Input } from '@/shared/components/ui/Input';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Palette, Zap } from 'lucide-react';
 import { Tooltip } from '@/shared/components/ui';
 
 interface StyleSelectorProps {
@@ -10,112 +10,75 @@ interface StyleSelectorProps {
   productName: string;
 }
 
-const getPresets = (productName: string): string[] => {
+const getPresets = (productName: string) => {
   const p = productName.toLowerCase();
   
-  // Base styles that are versatile
-  const base = ['Photorealistic', 'Studio Lighting'];
+  // High-priority requested styles
+  const trending = [
+    'Photorealistic', 
+    'Minimalist Branding', 
+    'Cyberpunk Neon', 
+    'Studio Lighting'
+  ];
 
-  // Tech Accessories (Phone cases, laptop sleeves, etc)
-  if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('mouse') || p.includes('tech')) {
-    return [...base, 'Tech Gadget Aesthetic', 'Isometric 3D', 'Cyberpunk Neon', 'Holographic', 'Matte Black', 'Gaming Setup', 'Vaporwave'];
+  const productSpecific: string[] = [];
+  
+  // Tech & Desktop Accessories
+  if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('mouse') || p.includes('tech') || p.includes('desk')) {
+    productSpecific.push('Tech Gadget Aesthetic', 'Matte Black Stealth', 'Holographic Prism', 'Clean Desktop Setup', 'Vaporwave Glitch');
   }
 
-  // Drinkware (Mugs, bottles, tumblers)
-  if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
-    return [...base, 'Cozy Morning Vibe', 'Artisan Ceramic', 'Outdoor Adventure', 'Cafe Atmosphere', 'Soft Bokeh', 'Rustic Wood'];
+  // Drinkware
+  else if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
+    productSpecific.push('Cozy Morning Vibe', 'Dark Academia Study', 'Minimalist Cafe', 'Outdoor Adventure', 'Rustic Timber');
   }
 
-  // Apparel (T-Shirts, Hoodies, Hats)
-  if (p.includes('shirt') || p.includes('hoodie') || p.includes('cap') || p.includes('hat') || p.includes('beanie') || p.includes('sock') || p.includes('apron')) {
-    return [...base, 'Urban Streetwear', 'Vintage 90s', 'Y2K Fashion', 'High Fashion', 'Eco Organic', 'Flat Lay', 'Grunge'];
+  // Apparel & Fashion
+  else if (p.includes('shirt') || p.includes('hoodie') || p.includes('cap') || p.includes('hat') || p.includes('beanie') || p.includes('sock') || p.includes('apron')) {
+    productSpecific.push('Urban Techwear', '90s Streetwear', 'High-Fashion Editorial', 'Eco-Organic Texture', 'Vintage Wash');
   }
 
-  // Decor & Print (Posters, Canvas, Pillows)
-  if (p.includes('poster') || p.includes('canvas') || p.includes('pillow') || p.includes('wall') || p.includes('notebook') || p.includes('tote')) {
-    return [...base, 'Interior Design', 'Bohemian Chic', 'Industrial Loft', 'Scandinavian', 'Mid-Century Modern', 'Gallery Wall', 'Vector Art'];
+  // Art, Print & Home
+  else if (p.includes('poster') || p.includes('canvas') || p.includes('pillow') || p.includes('wall') || p.includes('notebook') || p.includes('tote')) {
+    productSpecific.push('Mid-Century Modern', 'Industrial Loft', 'Scandi-Minimalism', 'Gallery Exhibition', 'Bohemian Interior');
   }
 
-  // Stickers & Small Items
-  if (p.includes('sticker') || p.includes('pin') || p.includes('keychain') || p.includes('magnet')) {
-    return [...base, 'Die-Cut Vinyl', 'Holographic', 'Macro Photography', 'Pop Art', 'Paper Texture', 'Sketchbook'];
+  // Stickers & Small Goods
+  else {
+    productSpecific.push('Prismatic Holographic', 'Die-Cut Vinyl', 'Macro Depth', 'Street Art Wheatpaste', 'Retro Badge');
   }
 
-  // Default Fallback
-  return [...base, 'Cinematic', 'Vector Art', 'Vintage', 'Minimalist', '3D Render', 'Line Art', 'Pastel'];
+  return { trending, productSpecific };
 };
 
 const getProductSuggestions = (productName: string): string[] => {
   const p = productName.toLowerCase();
   
-  // Core styles suitable for any product
   const universalStyles = [
-    "High-end luxury aesthetic with matte black finish and gold foil accents",
-    "Minimalist Scandinavian design with soft lighting, neutral colors, and geometric simplicity",
-    "Bauhaus design style with strong geometric shapes, primary colors, and clean functional layout",
-    "Vibrant pop-art style with bold black outlines, halftone patterns, and saturated primary colors",
-    "Surreal Dali-esque composition with melting forms, floating elements, and dreamlike atmosphere"
+    "Luxury branding with deep matte textures and sophisticated rim lighting",
+    "Surreal floating composition with abstract geometric shapes and soft pastel gradients",
+    "Hyper-realistic macro photography focusing on premium material grain and intricate details",
+    "Bauhaus-inspired design with bold primary colors and strong mathematical grid layout"
   ];
 
-  // Apparel (T-Shirts, Hoodies, Caps, Socks, Beanies)
-  if (p.includes('shirt') || p.includes('hoodie') || p.includes('socks') || p.includes('cap') || p.includes('beanie')) {
+  if (p.includes('shirt') || p.includes('hoodie') || p.includes('socks')) {
     return [
       ...universalStyles,
-      "Gritty urban streetwear vibe with distressed textures, concrete background, and high contrast lighting",
-      "Vintage 90s athletic aesthetic with washed-out cotton texture and retro color blocking",
-      "Y2K futuristic fashion style with chrome accents, liquid shapes, and neon lighting",
-      "Eco-friendly organic branding with botanical shadows, earth tones, and natural linen textures",
-      "Dark academia aesthetic with rich mahogany tones, moody lighting, and classical composition",
-      "Cyberpunk fashion photography with neon rain-slicked streets and holographic overlays",
-      "High-fashion editorial look with dramatic posing and clean studio background",
-      "Retro thrift store aesthetic with warm film grain and nostalgic atmosphere"
+      "Gritty urban techwear aesthetic with rain-slicked concrete and neon blue backlight",
+      "Vintage 1990s hip-hop fashion photography with heavy film grain and warm nostalgic tones",
+      "High-fashion editorial spread with dramatic lighting and a clean, minimalist cyclorama wall"
     ];
   }
 
-  // Drinkware (Mugs, Tumblers, Bottles)
-  if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler')) {
-    return [
-      ...universalStyles,
-      "Cozy morning coffee vibe with warm sunlight, wooden table texture, and rising steam",
-      "Sleek modern workspace aesthetic with soft focus background and clean white desk",
-      "Outdoor adventure lifestyle shot with forest bokeh, natural lighting, and morning mist",
-      "Artisan ceramic studio style with clay textures, pottery tools, and soft northern light",
-      "Matte tactical gear look with rugged textures, dark mood, and sharp rim lighting",
-      "Summer picnic vibe with bright natural light, fresh fruits, and grassy background",
-      "Dark moody cafe setting with steam, coffee beans, and ambient warm lighting"
-    ];
-  }
-
-  // Tech & Small Goods (Stickers, Phone Cases, Laptop Sleeves)
-  if (p.includes('sticker') || p.includes('laptop') || p.includes('phone') || p.includes('case')) {
-    return [
-      ...universalStyles,
-      "Holographic iridescent finish with prism light reflections and glossy texture",
-      "Tech-reviewer studio aesthetic with RGB backlighting and crisp depth of field",
-      "Vaporwave aesthetic with purple grid background, glitch effects, and retro computer graphics",
-      "Isometric 3D render with clay-morphism texture, soft shadows, and vibrant plastic colors",
-      "Hand-drawn sketchbook style with pencil hatching, rough edges, and paper texture background",
-      "Clean Apple-style product photography with pure white background and soft reflections",
-      "Gaming setup aesthetic with neon purple and blue lighting and mechanical keyboard background"
-    ];
-  }
-
-  // Decor & Misc (Pillow, Canvas, Skate, Notebook, Tote)
   return [
     ...universalStyles,
-    "Interior design magazine style with perfectly styled living room background and soft diffuse light",
-    "Bohemian chic aesthetic with dried flowers, rattan textures, and warm golden hour lighting",
-    "Industrial loft style with exposed brick, metal textures, and cool tone lighting",
-    "Vintage travel poster style with flat vector colors and distressed paper texture",
-    "Psychedelic 60s rock poster style with swirling patterns, liquid typography, and vibrant clashing colors",
-    "Urban skate culture style with fisheye lens perspective and gritty concrete textures",
-    "Minimalist Japanese zen interior with tatami mats, bonsai, and balanced composition",
-    "Bright and airy Scandi living room with white walls, light wood, and natural light"
+    "Interior design magazine layout featuring a sun-drenched Scandinavian living room",
+    "Moody industrial loft interior with exposed red brick walls and focused spot lighting"
   ];
 };
 
 export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, productName }) => {
-  const presets = useMemo(() => getPresets(productName), [productName]);
+  const { trending, productSpecific } = useMemo(() => getPresets(productName), [productName]);
 
   const handleSuggest = () => {
     const suggestions = getProductSuggestions(productName);
@@ -123,46 +86,82 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
     onChange(random);
   };
 
+  const isActive = (style: string) => value.toLowerCase() === style.toLowerCase();
+
   return (
-    <div>
-      <div className="flex gap-2 mb-3 items-start">
+    <div className="space-y-4">
+      {/* Search/Input Field */}
+      <div className="flex gap-2 items-start">
         <div className="flex-1">
-          <Tooltip content="Type a custom artistic style, mood, or context">
-             <div>
+          <Tooltip content="Describe the mood, lighting, or setting for your mockup">
+             <div className="w-full">
                 <Input
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder={`E.g. minimalist ${productName.toLowerCase()}...`}
+                    placeholder={`Describe ${productName.toLowerCase()} style...`}
+                    className="h-[42px] bg-slate-900/50"
                 />
              </div>
           </Tooltip>
         </div>
-        <Tooltip content={`Auto-generate a creative style for ${productName}`} side="left">
+        <Tooltip content={`Generate a professional creative prompt`} side="left">
           <button
             onClick={handleSuggest}
-            className="mt-[1px] h-[42px] px-3 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="shrink-0 h-[42px] px-4 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm group"
             type="button"
           >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline font-medium text-xs">Magic</span>
+            <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+            <span className="hidden sm:inline font-bold text-[10px] uppercase tracking-wider">Magic</span>
           </button>
         </Tooltip>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {presets.map((style) => (
-          <Tooltip key={style} content={`Apply ${style} style`}>
-            <button
-              onClick={() => onChange(style)}
-              className={`px-3 py-1.5 rounded-full text-xs transition-all border ${
-                value.toLowerCase() === style.toLowerCase()
-                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm' 
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
-              }`}
-            >
-              {style}
-            </button>
-          </Tooltip>
-        ))}
+      
+      {/* Trending / Core Presets */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2 px-1">
+           <Zap className="w-3 h-3 text-amber-500" />
+           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Trending Styles</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {trending.map((style) => (
+            <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
+              <button
+                onClick={() => onChange(style)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  isActive(style)
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' 
+                    : 'bg-slate-900/40 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                }`}
+              >
+                {style}
+              </button>
+            </Tooltip>
+          ))}
+        </div>
+      </div>
+
+      {/* Product Specific Recommendations */}
+      <div className="space-y-2.5 pt-1">
+        <div className="flex items-center gap-2 px-1">
+           <Palette className="w-3 h-3 text-indigo-500" />
+           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Curated for {productName}</span>
+        </div>
+        <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
+          {productSpecific.map((style) => (
+            <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
+              <button
+                onClick={() => onChange(style)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  isActive(style)
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-900/20' 
+                    : 'bg-slate-900/40 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
+                }`}
+              >
+                {style}
+              </button>
+            </Tooltip>
+          ))}
+        </div>
       </div>
     </div>
   );
