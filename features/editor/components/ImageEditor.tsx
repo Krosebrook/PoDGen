@@ -1,11 +1,12 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useEditorState } from '../hooks/useEditorState';
 import { ImageDropzone } from './ImageDropzone';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorCanvas } from './EditorCanvas';
 import { Button, Card } from '@/shared/components/ui';
-import { Wand2, Search, ExternalLink, FileSearch, Sparkles, Brain } from 'lucide-react';
+import { Wand2, Search, ExternalLink, FileSearch, Sparkles, Brain, Image as ImageIcon } from 'lucide-react';
+import { extractImageFile } from '@/shared/utils/file';
 
 interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -27,11 +28,37 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
     loading,
     error,
     processFile,
+    handlePromptImageDrop,
     handleGenerate,
     handleAnalyze,
     handleReset,
     clearAllErrors
   } = useEditorState(onImageGenerated);
+
+  const [isDraggingOverPrompt, setIsDraggingOverPrompt] = useState(false);
+
+  const handlePromptDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverPrompt(true);
+  };
+
+  const handlePromptDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverPrompt(false);
+  };
+
+  const handlePromptDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOverPrompt(false);
+    
+    const file = extractImageFile(e.dataTransfer?.items);
+    if (file) {
+      handlePromptImageDrop(file);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-fadeIn">
@@ -60,25 +87,45 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
             error={error}
           />
 
-          <Card className="shadow-xl bg-slate-800/50 border-slate-700">
+          <Card className={`shadow-xl bg-slate-800/50 border-slate-700 transition-all ${isDraggingOverPrompt ? 'ring-2 ring-blue-500 scale-[1.01] bg-blue-500/5' : ''}`}>
             <header className="mb-4 flex items-center justify-between">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                 Creative Instructions
               </label>
-              {useThinking && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
-                  <Brain className="w-2.5 h-2.5" /> DEEP REASONING
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {useThinking && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
+                    <Brain className="w-2.5 h-2.5" /> DEEP REASONING
+                  </div>
+                )}
+                {isDraggingOverPrompt && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/40 text-blue-400 text-[9px] font-bold animate-pulse">
+                    <ImageIcon className="w-2.5 h-2.5" /> DROP TO DESCRIBE
+                  </div>
+                )}
+              </div>
             </header>
             
             <div className="space-y-4">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="E.g. 'Integrate a sci-fi HUD over the eyes' or 'Place this product on a neon street in Tokyo'"
-                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[140px] transition-all text-sm leading-relaxed"
-              />
+              <div className="relative">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onDragOver={handlePromptDragOver}
+                  onDragLeave={handlePromptDragLeave}
+                  onDrop={handlePromptDrop}
+                  placeholder="E.g. 'Integrate a sci-fi HUD over the eyes' or 'Place this product on a neon street in Tokyo'"
+                  className={`w-full bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[140px] transition-all text-sm leading-relaxed ${isDraggingOverPrompt ? 'border-blue-500 bg-blue-500/10' : ''}`}
+                />
+                {isDraggingOverPrompt && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-2xl bg-blue-500/5 backdrop-blur-[2px] border-2 border-dashed border-blue-500">
+                    <div className="flex flex-col items-center gap-2 text-blue-400">
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Drop to populate prompt</span>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <div className="flex gap-3">
                 <Button 

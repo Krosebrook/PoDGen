@@ -9,7 +9,8 @@ export type AIModelType =
   | 'gemini-3-pro-preview' 
   | 'gemini-2.5-flash-image' 
   | 'gemini-3-pro-image-preview'
-  | 'gemini-2.5-flash-lite-latest';
+  | 'gemini-2.5-flash-lite-latest'
+  | 'veo-3.1-fast-generate-preview';
 
 export type AspectRatio = "1:1" | "3:4" | "4:3" | "9:16" | "16:9";
 export type ImageSize = "1K" | "2K" | "4K";
@@ -19,10 +20,13 @@ export interface AIRequestConfig {
   aspectRatio?: AspectRatio;
   imageSize?: ImageSize;
   thinkingBudget?: number;
+  maxOutputTokens?: number;
   useSearch?: boolean;
   systemInstruction?: string;
   responseMimeType?: string;
   maxRetries?: number;
+  seed?: number;
+  temperature?: number;
 }
 
 export interface AIResponse {
@@ -43,11 +47,9 @@ class AICoreService {
     return AICoreService.instance;
   }
 
-  private async getApiKey(): Promise<string> {
+  private getApiKey(): string {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      throw new AuthenticationError("API Key missing. Please select a key in the settings.");
-    }
+    if (!apiKey) throw new AuthenticationError("API_KEY_MISSING: Environment key unavailable.");
     return apiKey;
   }
 
@@ -57,19 +59,12 @@ class AICoreService {
 
   private normalizeError(error: any): AppError {
     if (error instanceof AppError) return error;
-    
     const message = error?.message || String(error);
     const status = error?.status || error?.response?.status;
 
-    logger.warn(`AI Error caught: ${message} (Status: ${status})`);
-
     if (status === 429) return new RateLimitError();
     if (status === 401 || status === 403) return new AuthenticationError();
-    if (message.toLowerCase().includes("safety")) return new SafetyError();
-    if (message.includes("Requested entity was not found")) {
-      return new AuthenticationError("Selected API key project not found or billing not enabled.");
-    }
-    
+    if (message.toLowerCase().includes("safety")) return new SafetyError("Safety policy violation detected at current depth.");
     return new ApiError(message, status || 500);
   }
 
@@ -83,20 +78,15 @@ class AICoreService {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const apiKey = await this.getApiKey();
+        const apiKey = this.getApiKey();
         return await this.executeRequest(apiKey, prompt, images, config);
       } catch (error) {
         lastError = error;
         const normalized = this.normalizeError(error);
-        
-        if (normalized instanceof SafetyError || normalized instanceof AuthenticationError) {
-          throw normalized;
-        }
+        if (normalized instanceof SafetyError || normalized instanceof AuthenticationError) throw normalized;
 
         if (attempt < retries) {
-          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500);
-          logger.info(`Retrying AI request (Attempt ${attempt + 1}/${retries}) in ${Math.round(delay)}ms...`);
-          await this.sleep(delay);
+          await this.sleep(Math.pow(2, attempt) * 1000);
           continue;
         }
       }
@@ -111,60 +101,58 @@ class AICoreService {
     config: AIRequestConfig
   ): Promise<AIResponse> {
     const ai = new GoogleGenAI({ apiKey });
-    logger.debug(`Executing AI request with model: ${config.model}`);
-
-    const parts: Part[] = images.map(img => ({
-      inlineData: {
-        data: cleanBase64(img),
-        mimeType: getMimeType(img),
-      }
+    const parts: Part[] = images.filter(Boolean).map(img => ({
+      inlineData: { data: cleanBase64(img), mimeType: getMimeType(img) }
     }));
-    
-    parts.push({ text: prompt });
+    parts.push({ text: prompt || "Analyze input assets." });
 
-    const modelConfig: any = {
+    const generationConfig: any = {
       systemInstruction: config.systemInstruction,
       responseMimeType: config.responseMimeType,
+      temperature: config.temperature ?? 0.7,
+      seed: config.seed,
     };
 
-    if (config.thinkingBudget !== undefined && config.model.startsWith('gemini-3')) {
-      modelConfig.thinkingConfig = { thinkingBudget: config.thinkingBudget };
+    // EDGE CASE: Thinking Budget Coordination
+    // If maxOutputTokens is provided, we must ensure thinkingBudget is lower to avoid empty responses.
+    if (config.thinkingBudget !== undefined) {
+      const budget = config.thinkingBudget;
+      generationConfig.thinkingConfig = { thinkingBudget: budget };
+      if (config.maxOutputTokens) {
+        // Reserve at least 25% for output if not specified
+        generationConfig.maxOutputTokens = Math.max(config.maxOutputTokens, budget + 100);
+      }
+    } else if (config.maxOutputTokens) {
+      generationConfig.maxOutputTokens = config.maxOutputTokens;
     }
 
-    if (config.useSearch) {
-      modelConfig.tools = [{ googleSearch: {} }];
-    }
+    if (config.useSearch) generationConfig.tools = [{ googleSearch: {} }];
 
     if (config.model.includes('image')) {
-      modelConfig.imageConfig = {
-        aspectRatio: config.aspectRatio || "1:1",
-      };
+      generationConfig.imageConfig = { aspectRatio: config.aspectRatio || "1:1" };
       if (config.model === 'gemini-3-pro-image-preview') {
-        modelConfig.imageConfig.imageSize = config.imageSize || "1K";
+        generationConfig.imageConfig.imageSize = config.imageSize || "1K";
       }
     }
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: config.model,
       contents: { parts },
-      config: modelConfig,
+      config: generationConfig,
     });
 
     return this.parseResponse(response);
   }
 
   private parseResponse(response: GenerateContentResponse): AIResponse {
-    const result: AIResponse = {};
     const candidate = response.candidates?.[0];
-    
-    if (!candidate) throw new ApiError("No generation candidates returned.", 500);
+    if (!candidate) throw new ApiError("ZERO_CANDIDATES: Pipeline produced no results.", 500);
 
-    result.text = response.text;
-    result.finishReason = candidate.finishReason;
-
-    if (candidate.groundingMetadata?.groundingChunks) {
-      result.groundingSources = candidate.groundingMetadata.groundingChunks;
-    }
+    const result: AIResponse = {
+      text: response.text,
+      finishReason: candidate.finishReason,
+      groundingSources: candidate.groundingMetadata?.groundingChunks
+    };
 
     const imagePart = candidate.content?.parts.find(p => p.inlineData);
     if (imagePart?.inlineData?.data) {

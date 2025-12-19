@@ -8,7 +8,6 @@ export const getMimeType = (b64: string): string => {
   return match ? match[1] : 'image/png';
 };
 
-// Define and export ExportFormat type
 export type ExportFormat = 'png' | 'jpg' | 'svg';
 
 export interface TextOverlayConfig {
@@ -29,7 +28,7 @@ export interface TextOverlayConfig {
 }
 
 /**
- * High-precision canvas rendering for brand mockups.
+ * High-precision canvas rendering with edge-case protection for memory and coordinate bounds.
  */
 export const saveImage = async (
   imageUrl: string,
@@ -45,32 +44,36 @@ export const saveImage = async (
 
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Resource load failure"));
+      img.onerror = () => reject(new Error("TEXTURE_LOAD_FAILURE: Resource unreachable."));
     });
 
     const canvas = document.createElement('canvas');
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
+    // EDGE CASE: Max Canvas Size limits (prevent browser crash on extreme scale)
+    const maxDimension = 8192;
+    const w = Math.min(img.naturalWidth * scale, maxDimension);
+    const h = Math.min(img.naturalHeight * scale, maxDimension);
+    
     canvas.width = w;
     canvas.height = h;
 
-    const ctx = canvas.getContext('2d', { alpha: format === 'png' });
-    if (!ctx) throw new Error("Canvas context init failed");
+    const ctx = canvas.getContext('2d', { alpha: format === 'png', desynchronized: true });
+    if (!ctx) throw new Error("CANVAS_CONTEXT_FAILURE: Failed to acquire 2D context.");
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, w, h);
 
-    if (overlay && overlay.text) {
+    if (overlay && overlay.text.trim()) {
       ctx.save();
-      const fontSize = overlay.size * scale;
-      ctx.font = `${fontSize}px ${overlay.font}`;
+      const fontSize = (overlay.size * scale) * (w / img.naturalWidth);
+      ctx.font = `bold ${fontSize}px ${overlay.font}`;
       const textAlign = overlay.align || 'center';
       ctx.textAlign = textAlign;
       ctx.textBaseline = 'middle';
 
-      const xPos = (overlay.x / 100) * w;
-      const yPos = (overlay.y / 100) * h;
+      // Clamp coordinates to bounds
+      const xPos = Math.max(0, Math.min(100, overlay.x)) / 100 * w;
+      const yPos = Math.max(0, Math.min(100, overlay.y)) / 100 * h;
 
       ctx.translate(xPos, yPos);
       if (overlay.rotation) ctx.rotate((overlay.rotation * Math.PI) / 180);
@@ -79,14 +82,12 @@ export const saveImage = async (
       const lineHeight = fontSize * 1.2;
       const totalHeight = lines.length * lineHeight;
 
-      // Draw background if enabled
       if (overlay.bgEnabled) {
         ctx.save();
         const padding = (overlay.bgPadding ?? 16) * scale;
         const rounding = (overlay.bgRounding ?? 8) * scale;
         const bgOpacity = (overlay.bgOpacity ?? 50) / 100;
         
-        // Measure the widest line
         let maxLineWidth = 0;
         lines.forEach(line => {
           maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
@@ -95,42 +96,24 @@ export const saveImage = async (
         const bgWidth = maxLineWidth + (padding * 2);
         const bgHeight = totalHeight + (padding * 2);
         
-        // Calculate offset based on alignment
         let bgX = -bgWidth / 2;
         if (textAlign === 'left') bgX = -padding;
         if (textAlign === 'right') bgX = -bgWidth + padding;
         const bgY = -bgHeight / 2;
 
         const hex = overlay.bgColor || '#000000';
-        let r = 0, g = 0, b = 0;
-        if (hex.length === 7) {
-          r = parseInt(hex.slice(1, 3), 16);
-          g = parseInt(hex.slice(3, 5), 16);
-          b = parseInt(hex.slice(5, 7), 16);
-        }
-
         ctx.globalAlpha = bgOpacity;
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillStyle = hex;
         
-        // Draw rounded rectangle
+        // Rounded Rect Path
         ctx.beginPath();
-        ctx.moveTo(bgX + rounding, bgY);
-        ctx.lineTo(bgX + bgWidth - rounding, bgY);
-        ctx.quadraticCurveTo(bgX + bgWidth, bgY, bgX + bgWidth, bgY + rounding);
-        ctx.lineTo(bgX + bgWidth, bgY + bgHeight - rounding);
-        ctx.quadraticCurveTo(bgX + bgWidth, bgY + bgHeight, bgX + bgWidth - rounding, bgY + bgHeight);
-        ctx.lineTo(bgX + rounding, bgY + bgHeight);
-        ctx.quadraticCurveTo(bgX, bgY + bgHeight, bgX, bgY + bgHeight - rounding);
-        ctx.lineTo(bgX, bgY + rounding);
-        ctx.quadraticCurveTo(bgX, bgY, bgX + rounding, bgY);
-        ctx.closePath();
+        ctx.roundRect(bgX, bgY, bgWidth, bgHeight, rounding);
         ctx.fill();
         ctx.restore();
       } else {
-        // Shadow only if no background
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 20 * scale;
-        ctx.shadowOffsetY = 4 * scale;
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 10 * scale;
+        ctx.shadowOffsetY = 2 * scale;
       }
 
       ctx.fillStyle = overlay.color;
@@ -144,9 +127,13 @@ export const saveImage = async (
 
     const downloadLink = document.createElement('a');
     downloadLink.download = `${filename}.${format}`;
-    downloadLink.href = canvas.toDataURL(`image/${format === 'jpg' ? 'jpeg' : format}`, 0.9);
+    downloadLink.href = canvas.toDataURL(`image/${format === 'jpg' ? 'jpeg' : format}`, 0.95);
     downloadLink.click();
+    
+    // Cleanup
+    canvas.width = 0;
+    canvas.height = 0;
   } catch (error) {
-    console.error("Image export engine error:", error);
+    console.error("EXPORT_ENGINE_CRITICAL:", error);
   }
 };

@@ -25,9 +25,11 @@ export interface TextOverlayState {
 }
 
 export const useMerchController = (onImageGenerated?: (url: string, prompt: string) => void) => {
-  // Domain State
+  // Asset Management
   const [assets, setAssets] = useState<{ logo: string | null; bg: string | null }>({ logo: null, bg: null });
   const [loadingAssets, setLoadingAssets] = useState({ logo: false, bg: false });
+  
+  // Configuration
   const [config, setConfig] = useState({ product: MERCH_PRODUCTS[0], style: '' });
   const [textOverlay, setTextOverlay] = useState<TextOverlayState>({
     text: '', 
@@ -46,41 +48,51 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     bgRounding: 8
   });
 
-  // Result State
+  // Result Pipeline
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [variations, setVariations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // Cancellation & Cleanup
+  const activeTaskRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    return () => {
+      activeTaskRef.current = false;
+    };
+  }, []);
 
   const handleAssetUpload = useCallback(async (file: File, type: 'logo' | 'bg') => {
     setLoadingAssets(prev => ({ ...prev, [type]: true }));
     setError(null);
-    logger.info(`Uploading merch asset: ${type}`);
+    logger.info(`Depth Asset Upload: ${type} initiated`);
 
     try {
       const base64 = await readImageFile(file);
       setAssets(prev => ({ ...prev, [type]: base64 }));
+      // Clear results when logo changes as the context is no longer valid
       if (type === 'logo') {
         setResultImage(null);
         setVariations([]);
       }
     } catch (err: any) {
-      setError(err.message || `Failed to upload ${type}`);
+      setError(err.message || `Failed to process ${type} asset.`);
     } finally {
       setLoadingAssets(prev => ({ ...prev, [type]: false }));
     }
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!assets.logo) return;
+    if (!assets.logo || loading) return;
 
     setLoading(true);
     setError(null);
     setVariations([]);
-    logger.info("Generating primary mockup");
+    activeTaskRef.current = true;
+    
+    logger.info("Executing Primary Depth Generation");
 
     try {
       const prompt = constructMerchPrompt(config.product, config.style, !!assets.bg);
@@ -88,58 +100,65 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
         model: 'gemini-2.5-flash-image'
       });
       
-      if (res.image) {
+      if (activeTaskRef.current && res.image) {
         setResultImage(res.image);
         onImageGenerated?.(res.image, prompt);
       }
     } catch (err: any) {
-      setError(err.message || "Mockup generation failed.");
+      if (activeTaskRef.current) {
+        setError(err.message || "Pipeline stall during generation.");
+      }
     } finally {
-      setLoading(false);
+      if (activeTaskRef.current) {
+        setLoading(false);
+        activeTaskRef.current = false;
+      }
     }
-  }, [assets, config, onImageGenerated]);
+  }, [assets, config, loading, onImageGenerated]);
 
   const handleGenerateVariations = useCallback(async () => {
     if (!assets.logo || isGeneratingVariations) return;
 
     setIsGeneratingVariations(true);
     setError(null);
-    logger.info("Generating mockup variations bundle");
+    logger.info("Matrix Generation: Requesting alternate takes");
 
     try {
       const prompts = getVariationPrompts(config.product, config.style, !!assets.bg);
       
-      // Parallel execution with the resilient core service
       const variationResults = await Promise.all(
         prompts.map(p => aiCore.generate(p, assets.bg ? [assets.logo, assets.bg] : [assets.logo], {
           model: 'gemini-2.5-flash-image',
           maxRetries: 1
         }).catch(err => {
-          logger.warn("Variation failed to generate", err);
+          logger.warn("Matrix Node Failure:", err);
           return null;
         }))
       );
 
-      const images = variationResults.map(r => r?.image).filter((img): img is string => !!img);
+      const images = variationResults
+        .map(r => r?.image)
+        .filter((img): img is string => !!img);
+        
       setVariations(images);
       
       if (images.length === 0) {
-        setError("Could not generate alternative takes at this time.");
+        setError("Matrix Synthesis Failed: No alternate valid candidates generated.");
       }
     } catch (err: any) {
-      setError(err.message || "Variations failed.");
+      setError(err.message || "Matrix pipeline failed.");
     } finally {
       setIsGeneratingVariations(false);
     }
   }, [assets, config, isGeneratingVariations]);
 
-  const clearAsset = (type: 'logo' | 'bg') => {
+  const clearAsset = useCallback((type: 'logo' | 'bg') => {
     setAssets(prev => ({ ...prev, [type]: null }));
     if (type === 'logo') {
       setResultImage(null);
       setVariations([]);
     }
-  };
+  }, []);
 
   return {
     logoImage: assets.logo,

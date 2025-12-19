@@ -60,6 +60,35 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
     }
   }, []);
 
+  const handlePromptImageDrop = useCallback(async (file: File) => {
+    setLoading(true);
+    setError(null);
+    logger.info(`Handling prompt image drop for file: ${file.name}`);
+
+    try {
+      const base64 = await readImageFile(file);
+      setSelectedImage(base64);
+      setResultImage(null);
+      setAnalysisResult(null);
+      setGroundingSources([]);
+
+      // Automatically describe the dropped image to populate the prompt
+      const res = await aiCore.generate(
+        "Describe this image in detail. This description will be used as a prompt for an AI image editor. Focus on the subject, style, and artistic elements. Keep it under 60 words.",
+        [base64],
+        { model: 'gemini-3-flash-preview' }
+      );
+
+      if (res.text) {
+        setPrompt(res.text.trim());
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to process image drop.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const handleAIRequest = async (intent: 'generate' | 'analyze') => {
     if (intent === 'generate' && !prompt) return;
     if (intent === 'analyze' && !selectedImage) return;
@@ -133,6 +162,7 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
     loading,
     error,
     processFile,
+    handlePromptImageDrop,
     handleGenerate: () => handleAIRequest('generate'),
     handleAnalyze: () => handleAIRequest('analyze'),
     handleReset,

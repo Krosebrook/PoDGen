@@ -1,7 +1,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { generateOrEditImage } from '../../services/gemini';
+import { aiCore, AIModelType } from '../../services/ai-core';
 import { AppError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 interface UseGenAIResult {
   loading: boolean;
@@ -17,7 +18,6 @@ export const useGenAI = (): UseGenAIResult => {
   const [error, setError] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   
-  // Ref to track the active request controller
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
@@ -32,7 +32,6 @@ export const useGenAI = (): UseGenAIResult => {
     setResultImage(null);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -48,7 +47,6 @@ export const useGenAI = (): UseGenAIResult => {
   ): Promise<boolean> => {
     if (!imageBase64 || !prompt) return false;
 
-    // Abort any existing request before starting a new one
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -61,25 +59,38 @@ export const useGenAI = (): UseGenAIResult => {
     setResultImage(null);
 
     try {
-      const result = await generateOrEditImage(imageBase64, prompt, additionalImages, { 
-        signal: controller.signal 
-      });
+      logger.info(`Generating content with prompt: ${prompt.substring(0, 50)}...`);
       
-      // Check if aborted during await
+      const response = await aiCore.generate(
+        prompt,
+        [imageBase64, ...additionalImages],
+        { 
+          model: 'gemini-2.5-flash-image',
+          maxRetries: 2
+        }
+      );
+      
       if (controller.signal.aborted) return false;
 
-      setResultImage(result);
-      return true;
+      if (response.image) {
+        setResultImage(response.image);
+        return true;
+      } else if (response.text) {
+        // Fallback for text-only responses if they happen
+        logger.warn("Received text-only response from image model");
+        return false;
+      }
+      
+      return false;
 
     } catch (err: unknown) {
       if (controller.signal.aborted) return false;
       
-      // Silent catch for specific abort errors if they slip through
       if (err instanceof Error && (err.name === 'AbortError' || err.message === 'Request aborted')) {
         return false;
       }
 
-      console.error("GenAI Hook Error:", err);
+      logger.error("GenAI Hook Error:", err);
       
       let errorMessage = "An unexpected error occurred.";
       if (err instanceof AppError) {
@@ -92,7 +103,6 @@ export const useGenAI = (): UseGenAIResult => {
       return false;
 
     } finally {
-      // Only update loading state if this is still the active request
       if (abortControllerRef.current === controller) {
         setLoading(false);
         abortControllerRef.current = null;

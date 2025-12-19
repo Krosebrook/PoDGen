@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Tooltip } from '@/shared/components/ui';
+import { Tooltip, Input, Select, Badge } from '@/shared/components/ui';
 import { 
   Type, 
   AlignLeft, 
@@ -16,7 +16,9 @@ import {
   ArrowDown,
   Layers,
   Square,
-  CornerUpRight
+  CornerUpRight,
+  TextCursorInput,
+  Type as TypeIcon
 } from 'lucide-react';
 import { TextOverlayState } from '../hooks/useMerchState';
 
@@ -27,14 +29,14 @@ interface TextOverlayControlsProps {
 }
 
 const FONTS = [
-  { name: 'Inter (Sans)', value: 'Inter, sans-serif' },
-  { name: 'Outfit (Modern)', value: 'Outfit, sans-serif' },
-  { name: 'Playfair (Serif)', value: 'Playfair Display, serif' },
-  { name: 'JetBrains (Mono)', value: 'JetBrains Mono, monospace' },
-  { name: 'Bebas Neue (Bold)', value: 'Bebas Neue, sans-serif' },
-  { name: 'Montserrat', value: 'Montserrat, sans-serif' },
-  { name: 'Dancing Script', value: 'Dancing Script, cursive' },
-  { name: 'Impact', value: 'Impact, sans-serif' },
+  { label: 'Inter (Modern Sans)', value: 'Inter, sans-serif' },
+  { label: 'Outfit (Geometric)', value: 'Outfit, sans-serif' },
+  { label: 'Playfair (Elegant Serif)', value: 'Playfair Display, serif' },
+  { label: 'JetBrains (Technical)', value: 'JetBrains Mono, monospace' },
+  { label: 'Bebas Neue (Impact)', value: 'Bebas Neue, sans-serif' },
+  { label: 'Montserrat (Classic)', value: 'Montserrat, sans-serif' },
+  { label: 'Dancing Script (Script)', value: 'Dancing Script, cursive' },
+  { label: 'Impact (Bold)', value: 'Impact, sans-serif' },
 ];
 
 const PRESET_COLORS = [
@@ -57,122 +59,113 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
   const clearText = () => handleChange('text', '');
 
   return (
-    <div className={`space-y-6 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+    <div className={`space-y-6 animate-fadeIn ${disabled ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
       {/* Content Section */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <label className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] flex items-center gap-2">
-            <Type className="w-3 h-3" /> Content
+            <TextCursorInput className="w-3 h-3 text-blue-500" /> Typography Content
           </label>
           {overlay.text && (
-            <Tooltip content="Remove all overlay text">
-              <button 
-                onClick={clearText}
-                className="text-[9px] font-black text-slate-500 hover:text-red-400 transition-colors uppercase tracking-tighter flex items-center gap-1"
-              >
-                <Trash2 className="w-2.5 h-2.5" /> Clear
-              </button>
-            </Tooltip>
+            <button 
+              onClick={clearText}
+              className="text-[9px] font-black text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest flex items-center gap-1 group"
+            >
+              <Trash2 className="w-2.5 h-2.5 group-hover:scale-110 transition-transform" /> Reset Layer
+            </button>
           )}
         </div>
-        <Tooltip content="Enter custom text to overlay on the product mockup">
-          <div className="relative">
-            <textarea
-              placeholder="Type your text here..."
-              value={overlay.text}
-              onChange={(e) => handleChange('text', e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all resize-none min-h-[90px] text-sm leading-relaxed"
-            />
-          </div>
+        <Tooltip content="Input text to overlay on the render. Drag the text in the viewport to reposition." side="top">
+          <textarea
+            placeholder="E.g. SUMMER COLLECTION 2025"
+            value={overlay.text}
+            onChange={(e) => handleChange('text', e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-slate-100 placeholder-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/40 outline-none transition-all resize-none min-h-[100px] text-sm font-medium leading-relaxed shadow-inner"
+          />
         </Tooltip>
       </section>
 
       {/* Style Section */}
       <section className="space-y-4">
         <label className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] px-1 flex items-center gap-2">
-          <Palette className="w-3 h-3" /> Style & Color
+          <Palette className="w-3 h-3 text-indigo-500" /> Visual Identity
         </label>
         
-        <div className="grid grid-cols-1 gap-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Tooltip content="Choose a font family" className="w-full">
-                <select 
-                  value={overlay.font}
-                  onChange={(e) => handleChange('font', e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-200 outline-none focus:border-blue-500/50 cursor-pointer appearance-none hover:border-slate-700 transition-colors"
-                >
-                  {FONTS.map(f => (
-                    <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.name}</option>
-                  ))}
-                </select>
-              </Tooltip>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600">
-                <ArrowDown className="w-3 h-3" />
-              </div>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <Select 
+                label="Typeface"
+                value={overlay.font}
+                onChange={(e) => handleChange('font', e.target.value)}
+                options={FONTS}
+              />
             </div>
 
-            <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
-              {[
-                { id: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Align Left' },
-                { id: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, label: 'Align Center' },
-                { id: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, label: 'Align Right' }
-              ].map(align => (
-                <Tooltip key={align.id} content={align.label}>
-                  <button
-                    onClick={() => handleChange('align', align.id)}
-                    className={`p-1.5 rounded-lg transition-all ${overlay.align === align.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
-                  >
-                    {align.icon}
-                  </button>
-                </Tooltip>
-              ))}
+            <div className="flex flex-col gap-1.5 shrink-0">
+               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Alignment</label>
+               <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 gap-1 h-[42px]">
+                {[
+                  { id: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Left' },
+                  { id: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, label: 'Center' },
+                  { id: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, label: 'Right' }
+                ].map(align => (
+                  <Tooltip key={align.id} content={`Align ${align.label}`}>
+                    <button
+                      onClick={() => handleChange('align', align.id)}
+                      className={`p-1.5 rounded-lg transition-all h-full aspect-square flex items-center justify-center ${overlay.align === align.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300 hover:bg-slate-800'}`}
+                    >
+                      {align.icon}
+                    </button>
+                  </Tooltip>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-            <div className="flex flex-wrap gap-2 justify-between">
-              {PRESET_COLORS.map(c => (
-                <Tooltip key={c} content={`Set color to ${c}`}>
-                  <button
-                    onClick={() => handleChange('color', c)}
-                    className={`w-5 h-5 rounded-full border border-black/20 transition-all hover:scale-125 active:scale-90 ${overlay.color === c ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : ''}`}
-                    style={{ backgroundColor: c }}
-                  />
-                </Tooltip>
-              ))}
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-inner">
+            <div className="flex justify-between items-center mb-1">
+               <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Color Palette</span>
+               <div className="flex gap-1">
+                 {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => handleChange('color', c)}
+                      className={`w-4 h-4 rounded-full border border-white/5 transition-all hover:scale-125 ${overlay.color === c ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950' : ''}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+               </div>
             </div>
             
-            <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
+            <div className="flex items-center gap-4 pt-4 border-t border-slate-900">
               <div className="relative group shrink-0">
-                <Tooltip content="Pick a custom text color">
+                <Tooltip content="Custom Hex Color">
                   <div className="relative">
                     <input 
                       type="color" 
                       value={overlay.color.length === 7 ? overlay.color : '#ffffff'}
                       onChange={(e) => handleChange('color', e.target.value)}
-                      className="w-10 h-10 opacity-0 absolute inset-0 cursor-pointer z-10"
+                      className="w-12 h-12 opacity-0 absolute inset-0 cursor-pointer z-10"
                     />
                     <div 
-                      className="w-10 h-10 rounded-xl border border-slate-800 flex items-center justify-center shadow-inner overflow-hidden transition-all group-hover:border-slate-600"
+                      className="w-12 h-12 rounded-xl border-2 border-slate-800 flex items-center justify-center shadow-lg transition-all group-hover:border-blue-500/50"
                       style={{ backgroundColor: overlay.color }}
                     >
-                      <Palette className="w-4 h-4 text-black/20" />
+                      <Palette className="w-5 h-5 mix-blend-difference text-white/40" />
                     </div>
                   </div>
                 </Tooltip>
               </div>
-              <div className="flex-1 relative">
-                <Tooltip content="Enter Hex color code" className="w-full">
-                  <div className="relative">
-                    <input 
-                      value={overlay.color.toUpperCase()}
-                      onChange={(e) => handleHexChange(e, 'color')}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-mono font-bold text-slate-300 outline-none focus:border-blue-500/50 uppercase"
-                    />
-                    <Hash className="w-3 h-3 absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
-                  </div>
-                </Tooltip>
+              <div className="flex-1">
+                <div className="relative">
+                  <input 
+                    value={overlay.color.toUpperCase()}
+                    onChange={(e) => handleHexChange(e, 'color')}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-9 py-2.5 text-xs font-mono font-black text-slate-300 outline-none focus:border-blue-500/50 uppercase tracking-widest"
+                  />
+                  <Hash className="w-3 h-3 absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                </div>
               </div>
             </div>
           </div>
@@ -183,103 +176,67 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <label className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] flex items-center gap-2">
-            <Square className="w-3 h-3" /> Background Shape
+            <Square className="w-3 h-3 text-indigo-500" /> Legibility Mask
           </label>
-          <Tooltip content="Toggle text background shape for better legibility">
+          <Tooltip content="Add a background shape behind the text to improve contrast">
             <button 
               onClick={() => handleChange('bgEnabled', !overlay.bgEnabled)}
-              className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md transition-all ${overlay.bgEnabled ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'}`}
+              className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all border ${overlay.bgEnabled ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-slate-900 text-slate-500 border-slate-800'}`}
             >
-              {overlay.bgEnabled ? 'ON' : 'OFF'}
+              {overlay.bgEnabled ? 'Enabled' : 'Disabled'}
             </button>
           </Tooltip>
         </div>
 
         {overlay.bgEnabled && (
-          <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-4 space-y-5 animate-fadeIn">
-            <div className="flex items-center gap-3">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-5 animate-fadeIn shadow-inner">
+            <div className="flex items-center gap-4">
               <div className="relative group shrink-0">
-                <Tooltip content="Pick background color">
-                  <div className="relative">
-                    <input 
-                      type="color" 
-                      value={overlay.bgColor.length === 7 ? overlay.bgColor : '#000000'}
-                      onChange={(e) => handleChange('bgColor', e.target.value)}
-                      className="w-10 h-10 opacity-0 absolute inset-0 cursor-pointer z-10"
-                    />
-                    <div 
-                      className="w-10 h-10 rounded-xl border border-slate-800 flex items-center justify-center shadow-inner overflow-hidden transition-all group-hover:border-slate-600"
-                      style={{ backgroundColor: overlay.bgColor }}
-                    >
-                      <Palette className="w-4 h-4 text-white/20" />
-                    </div>
-                  </div>
-                </Tooltip>
+                <input 
+                  type="color" 
+                  value={overlay.bgColor.length === 7 ? overlay.bgColor : '#000000'}
+                  onChange={(e) => handleChange('bgColor', e.target.value)}
+                  className="w-10 h-10 opacity-0 absolute inset-0 cursor-pointer z-10"
+                />
+                <div 
+                  className="w-10 h-10 rounded-xl border border-slate-800 flex items-center justify-center shadow-lg overflow-hidden transition-all group-hover:border-slate-600"
+                  style={{ backgroundColor: overlay.bgColor }}
+                >
+                  <Palette className="w-4 h-4 mix-blend-difference text-white/20" />
+                </div>
               </div>
               <div className="flex-1 relative">
-                <Tooltip content="Hex code for background color" className="w-full">
-                  <div className="relative">
-                    <input 
-                      value={overlay.bgColor.toUpperCase()}
-                      onChange={(e) => handleHexChange(e, 'bgColor')}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-mono font-bold text-slate-300 outline-none focus:border-blue-500/50 uppercase"
-                    />
-                    <Hash className="w-3 h-3 absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
-                  </div>
-                </Tooltip>
+                <input 
+                  value={overlay.bgColor.toUpperCase()}
+                  onChange={(e) => handleHexChange(e, 'bgColor')}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-9 py-2 text-[10px] font-mono font-black text-slate-400 outline-none focus:border-blue-500/50 uppercase tracking-widest"
+                />
+                <Hash className="w-3 h-3 absolute left-3 top-1/2 -translate-y-1/2 text-slate-700" />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">BG Opacity</span>
-                <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.bgOpacity}%</span>
-              </div>
-              <Tooltip content="Adjust the transparency of the background shape" className="w-full">
-                <div className="flex items-center gap-3">
-                  <Droplets className="w-3.5 h-3.5 text-slate-600" />
-                  <input 
-                    type="range" min="0" max="100" value={overlay.bgOpacity} 
-                    onChange={(e) => handleChange('bgOpacity', parseInt(e.target.value))}
-                    className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                  />
-                </div>
-              </Tooltip>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">BG Padding</span>
-                <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.bgPadding}px</span>
-              </div>
-              <Tooltip content="Increase spacing around the text" className="w-full">
-                <div className="flex items-center gap-3">
-                  <Maximize className="w-3.5 h-3.5 text-slate-600" />
-                  <input 
-                    type="range" min="0" max="60" value={overlay.bgPadding} 
-                    onChange={(e) => handleChange('bgPadding', parseInt(e.target.value))}
-                    className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                  />
-                </div>
-              </Tooltip>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">BG Rounding</span>
-                <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.bgRounding}px</span>
-              </div>
-              <Tooltip content="Curve the corners of the background shape" className="w-full">
-                <div className="flex items-center gap-3">
-                  <CornerUpRight className="w-3.5 h-3.5 text-slate-600" />
-                  <input 
-                    type="range" min="0" max="40" value={overlay.bgRounding} 
-                    onChange={(e) => handleChange('bgRounding', parseInt(e.target.value))}
-                    className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                  />
-                </div>
-              </Tooltip>
-            </div>
+            <RangeControl 
+              label="Transparency" 
+              value={overlay.bgOpacity} 
+              icon={<Droplets className="w-3.5 h-3.5" />} 
+              onChange={(val) => handleChange('bgOpacity', val)} 
+            />
+            
+            <RangeControl 
+              label="Padding" 
+              value={overlay.bgPadding} 
+              max={60} 
+              icon={<Maximize className="w-3.5 h-3.5" />} 
+              onChange={(val) => handleChange('bgPadding', val)} 
+            />
+            
+            <RangeControl 
+              label="Corner Radius" 
+              value={overlay.bgRounding} 
+              max={40} 
+              icon={<CornerUpRight className="w-3.5 h-3.5" />} 
+              onChange={(val) => handleChange('bgRounding', val)} 
+            />
           </div>
         )}
       </section>
@@ -287,110 +244,91 @@ export const TextOverlayControls: React.FC<TextOverlayControlsProps> = ({ overla
       {/* Transform Section */}
       <section className="space-y-4">
         <label className="text-[10px] uppercase text-slate-500 font-black tracking-[0.2em] px-1 flex items-center gap-2">
-          <Maximize className="w-3 h-3" /> Layout & Appearance
+          <Maximize className="w-3 h-3 text-indigo-500" /> Layout Metrics
         </label>
         
-        <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl p-4 space-y-5">
-          {/* Size */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Font Size</span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.size}px</span>
-            </div>
-            <Tooltip content="Scale text size" className="w-full">
-              <div className="flex items-center gap-3">
-                <Type className="w-3.5 h-3.5 text-slate-600" />
-                <input 
-                  type="range" min="8" max="250" value={overlay.size} 
-                  onChange={(e) => handleChange('size', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                />
-              </div>
-            </Tooltip>
-          </div>
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-6 shadow-inner">
+          <RangeControl 
+            label="Scale" 
+            value={overlay.size} 
+            min={8} 
+            max={250} 
+            icon={<TypeIcon className="w-3.5 h-3.5" />} 
+            onChange={(val) => handleChange('size', val)} 
+            suffix="px"
+          />
 
-          {/* Opacity */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                <Layers className="w-2.5 h-2.5" /> Text Opacity
-              </span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.opacity}%</span>
-            </div>
-            <Tooltip content="Adjust text transparency" className="w-full">
-              <div className="flex items-center gap-3">
-                <Droplets className="w-3.5 h-3.5 text-slate-600" />
-                <input 
-                  type="range" min="0" max="100" value={overlay.opacity} 
-                  onChange={(e) => handleChange('opacity', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                />
-              </div>
-            </Tooltip>
-          </div>
+          <RangeControl 
+            label="Opacity" 
+            value={overlay.opacity} 
+            icon={<Layers className="w-3.5 h-3.5" />} 
+            onChange={(val) => handleChange('opacity', val)} 
+          />
 
-          {/* Rotation */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Rotation</span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">{overlay.rotation}°</span>
-            </div>
-            <Tooltip content="Rotate text overlay" className="w-full">
-              <div className="flex items-center gap-3">
-                <RotateCw className="w-3.5 h-3.5 text-slate-600" />
-                <input 
-                  type="range" min="-180" max="180" value={overlay.rotation} 
-                  onChange={(e) => handleChange('rotation', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                />
-              </div>
-            </Tooltip>
-          </div>
+          <RangeControl 
+            label="Orientation" 
+            value={overlay.rotation} 
+            min={-180} 
+            max={180} 
+            icon={<RotateCw className="w-3.5 h-3.5" />} 
+            onChange={(val) => handleChange('rotation', val)} 
+            suffix="°"
+          />
 
-          {/* X Position */}
-          <div className="space-y-2 pt-2 border-t border-slate-800/50">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Horizontal %</span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">{Math.round(overlay.x)}%</span>
-            </div>
-            <Tooltip content="Move text horizontally" className="w-full">
-              <div className="flex items-center gap-3">
-                <ArrowRight className="w-3.5 h-3.5 text-slate-600" />
-                <input 
-                  type="range" min="0" max="100" value={overlay.x} 
-                  onChange={(e) => handleChange('x', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                />
-              </div>
-            </Tooltip>
-          </div>
-
-          {/* Y Position */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Vertical %</span>
-              <span className="text-[10px] font-mono text-blue-400 font-bold">{Math.round(overlay.y)}%</span>
-            </div>
-            <Tooltip content="Move text vertically" className="w-full">
-              <div className="flex items-center gap-3">
-                <ArrowDown className="w-3.5 h-3.5 text-slate-600" />
-                <input 
-                  type="range" min="0" max="100" value={overlay.y} 
-                  onChange={(e) => handleChange('y', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none"
-                />
-              </div>
-            </Tooltip>
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-900">
+            <RangeControl 
+              label="Horiz. Offset" 
+              value={overlay.x} 
+              icon={<ArrowRight className="w-3.5 h-3.5" />} 
+              onChange={(val) => handleChange('x', val)} 
+              compact
+            />
+            <RangeControl 
+              label="Vert. Offset" 
+              value={overlay.y} 
+              icon={<ArrowDown className="w-3.5 h-3.5" />} 
+              onChange={(val) => handleChange('y', val)} 
+              compact
+            />
           </div>
         </div>
       </section>
       
       {overlay.text && (
-        <div className="text-[10px] text-slate-500 flex items-center gap-2 justify-center bg-blue-500/5 py-3 rounded-xl border border-blue-500/10 mt-2">
-           <Layers className="w-3.5 h-3.5 text-blue-500/50" />
-           <span>Reposition by dragging directly on the preview</span>
+        <div className="flex items-center gap-3 bg-blue-500/5 p-4 rounded-2xl border border-blue-500/10 shadow-sm animate-pulse">
+           <Layers className="w-4 h-4 text-blue-500/50" />
+           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+             Direct manipulation: Drag text in the preview window to reposition.
+           </p>
         </div>
       )}
     </div>
   );
 };
+
+interface RangeControlProps {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  icon: React.ReactNode;
+  onChange: (val: number) => void;
+  suffix?: string;
+  compact?: boolean;
+}
+
+const RangeControl: React.FC<RangeControlProps> = ({ label, value, min = 0, max = 100, icon, onChange, suffix = "%", compact }) => (
+  <div className="space-y-2.5">
+    <div className="flex justify-between items-center px-0.5">
+      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+        {icon} {label}
+      </span>
+      <span className="text-[10px] font-mono text-blue-400 font-black">{Math.round(value)}{suffix}</span>
+    </div>
+    <input 
+      type="range" min={min} max={max} value={value} 
+      onChange={(e) => onChange(parseInt(e.target.value))}
+      className="w-full accent-blue-600 h-1 bg-slate-800 rounded-lg cursor-pointer appearance-none hover:accent-blue-400 transition-all"
+    />
+  </div>
+);

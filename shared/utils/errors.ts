@@ -14,6 +14,7 @@ export enum ErrorCode {
 }
 
 export class AppError extends Error {
+  public readonly title: string;
   constructor(
     message: string,
     public readonly code: ErrorCode,
@@ -23,7 +24,15 @@ export class AppError extends Error {
   ) {
     super(message);
     this.name = 'AppError';
+    this.title = this.formatTitle(code);
     Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  private formatTitle(code: ErrorCode): string {
+    return code.replace(/_/g, ' ').toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 }
 
@@ -35,7 +44,7 @@ export class ValidationError extends AppError {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message: string = 'Authentication failed.') {
+  constructor(message: string = 'Security context negotiation failed.') {
     super(message, ErrorCode.AUTHENTICATION_ERROR, 401);
     this.name = 'AuthenticationError';
   }
@@ -43,13 +52,13 @@ export class AuthenticationError extends AppError {
 
 export class RateLimitError extends AppError {
   constructor(retryAfter?: number) {
-    super('Too many requests. Please try again later.', ErrorCode.RATE_LIMITED, 429, { retryAfter });
+    super('Generation throughput exceeded. System cooling down.', ErrorCode.RATE_LIMITED, 429, { retryAfter });
     this.name = 'RateLimitError';
   }
 }
 
 export class SafetyError extends AppError {
-  constructor(message: string = 'Content blocked by safety filters.') {
+  constructor(message: string = 'Pipeline interrupted by deep safety filters.') {
     super(message, ErrorCode.SAFETY_ERROR, 400);
     this.name = 'SafetyError';
   }
