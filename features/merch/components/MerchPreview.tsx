@@ -64,7 +64,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     e.preventDefault();
     
     const textRect = textRef.current.getBoundingClientRect();
-    // Calculate precise click offset within the text element
     setDragOffset({
       x: e.clientX - textRect.left - (textRect.width / 2),
       y: e.clientY - textRect.top - (textRect.height / 2)
@@ -81,7 +80,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     const rect = containerRef.current.getBoundingClientRect();
 
     rafRef.current = requestAnimationFrame(() => {
-      // Coordinate Clamp: [0-100] percentage range
       const x = ((e.clientX - dragOffset.x - rect.left) / rect.width) * 100;
       const y = ((e.clientY - dragOffset.y - rect.top) / rect.height) * 100;
       
@@ -103,11 +101,34 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     }
   }, []);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!textOverlay || !onTextOverlayChange) return;
+    
+    const step = e.shiftKey ? 5 : 1;
+    let newX = textOverlay.x;
+    let newY = textOverlay.y;
+
+    switch (e.key) {
+      case 'ArrowLeft': newX -= step; break;
+      case 'ArrowRight': newX += step; break;
+      case 'ArrowUp': newY -= step; break;
+      case 'ArrowDown': newY += step; break;
+      default: return;
+    }
+
+    e.preventDefault();
+    onTextOverlayChange({
+      ...textOverlay,
+      x: Math.max(0, Math.min(100, newX)),
+      y: Math.max(0, Math.min(100, newY))
+    });
+  };
+
   useEffect(() => {
     if (isDraggingText) {
       window.addEventListener('mousemove', handleTextDragMove);
       window.addEventListener('mouseup', handleTextDragEnd);
-      window.addEventListener('blur', handleTextDragEnd); // Handle window focus loss edge case
+      window.addEventListener('blur', handleTextDragEnd);
     } else {
       window.removeEventListener('mousemove', handleTextDragMove);
       window.removeEventListener('mouseup', handleTextDragEnd);
@@ -149,18 +170,22 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
 
         <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden group/canvas">
           {loading ? (
-            <div className="flex flex-col items-center gap-6 animate-fadeIn">
+            <div className="flex flex-col items-center gap-6 animate-fadeIn" aria-live="polite">
               <Spinner className="w-12 h-12 text-blue-500" />
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Rendering Master...</p>
             </div>
           ) : activeImage ? (
             <div className="relative w-full h-full flex items-center justify-center p-12 select-none group/image">
-              <img src={activeImage} alt="Master Render" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-fadeIn" />
+              <img src={activeImage} alt="Mockup preview" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-fadeIn" />
               {textOverlay?.text && (
                  <div
                    ref={textRef}
                    onMouseDown={handleTextDragStart}
-                   className={`absolute cursor-grab active:cursor-grabbing select-none whitespace-pre-wrap z-30 transition-all ${isDraggingText ? 'scale-105' : ''}`}
+                   onKeyDown={handleKeyDown}
+                   tabIndex={0}
+                   role="button"
+                   aria-label="Interactive text overlay. Use arrow keys to move."
+                   className={`absolute cursor-grab active:cursor-grabbing select-none whitespace-pre-wrap z-30 transition-all focus:ring-2 focus:ring-blue-500 rounded px-1 ${isDraggingText ? 'scale-105' : ''}`}
                    style={{
                      left: `${textOverlay.x}%`,
                      top: `${textOverlay.y}%`,
@@ -178,14 +203,14 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
               )}
             </div>
           ) : error ? (
-            <div className="text-center max-w-sm px-10 animate-fadeIn">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-6" />
+            <div className="text-center max-w-sm px-10 animate-fadeIn" role="alert">
+              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-6" aria-hidden="true" />
               <h2 className="text-xl font-black text-white mb-4 uppercase tracking-tighter">System Interrupt</h2>
               <p className="text-slate-500 text-xs mb-8 leading-relaxed font-medium">{error}</p>
             </div>
           ) : (
             <div className="text-center opacity-20">
-              <ShoppingBag className="w-24 h-24 mx-auto mb-4" />
+              <ShoppingBag className="w-24 h-24 mx-auto mb-4" aria-hidden="true" />
               <h2 className="text-xl font-black uppercase tracking-tighter">Viewport Idle</h2>
             </div>
           )}

@@ -31,7 +31,7 @@ TECHNICAL REQUIREMENTS:
 };
 
 /**
- * Variation Matrix Prompts.
+ * Variation Matrix Prompts - Truncated to 3 specific variations.
  */
 export const getVariationPrompts = (
   product: MerchProduct,
@@ -41,10 +41,9 @@ export const getVariationPrompts = (
   const base = constructMerchPrompt(product, stylePreference, hasBackground);
   
   return [
-    `${base} ALTERNATE ANGLE: Close-up macro shot from a low hero perspective. Focus on material texture and logo depth.`,
-    `${base} LIGHTING MOD: Dramatic high-contrast "Rembrandt" lighting with deep shadows and strong rim highlights.`,
-    `${base} ENVIRONMENT MOD: Shift context to a minimalist brutalist architectural space with diffused natural top-down lighting.`,
-    `${base} ACTION SHOT: Handheld camera aesthetic, slightly off-center composition, soft motion blur in background for dynamic feel.`
+    `${base} VARIATION 1: Alternative dynamic angle. A 45-degree isometric product shot with sharp "golden hour" side-lighting to emphasize surface texture and depth.`,
+    `${base} VARIATION 2: High-contrast studio setup. Dramatic "Rembrandt" lighting with deep shadows and strong rim highlights to create a premium, moody aesthetic.`,
+    `${base} VARIATION 3: Macro close-up perspective. Focus intensely on the logo integration and material grain, using a shallow depth of field for professional bokeh.`
   ];
 };
 

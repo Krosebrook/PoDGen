@@ -13,39 +13,32 @@ interface StyleSelectorProps {
 const getPresets = (productName: string) => {
   const p = productName.toLowerCase();
   
-  // High-priority requested styles
   const trending = [
     'Photorealistic', 
     'Minimalist Branding', 
-    'Cyberpunk Neon', 
-    'Studio Lighting'
+    'Studio Lighting',
+    'Cinematic 8k'
   ];
 
   const productSpecific: string[] = [];
   
-  // Tech & Desktop Accessories
-  if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('mouse') || p.includes('tech') || p.includes('desk')) {
-    productSpecific.push('Tech Gadget Aesthetic', 'Matte Black Stealth', 'Holographic Prism', 'Clean Desktop Setup', 'Vaporwave Glitch');
+  if (p.includes('shirt') || p.includes('hoodie') || p.includes('apparel') || p.includes('tee')) {
+    productSpecific.push('Streetwear Grunge', 'Urban Techwear', 'Editorial High-Fashion', 'Vintage 90s Wash', 'Minimalist Organic');
   }
-
-  // Drinkware
   else if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
-    productSpecific.push('Cozy Morning Vibe', 'Dark Academia Study', 'Minimalist Cafe', 'Outdoor Adventure', 'Rustic Timber');
+    productSpecific.push('Minimalist Ceramic', 'Cozy Morning Vibe', 'Dark Academia Study', 'Nordic Kitchen', 'Rustic Timber');
   }
-
-  // Apparel & Fashion
-  else if (p.includes('shirt') || p.includes('hoodie') || p.includes('cap') || p.includes('hat') || p.includes('beanie') || p.includes('sock') || p.includes('apron')) {
-    productSpecific.push('Urban Techwear', '90s Streetwear', 'High-Fashion Editorial', 'Eco-Organic Texture', 'Vintage Wash');
+  else if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('tech')) {
+    productSpecific.push('Cyberpunk Neon', 'Matte Black Stealth', 'Holographic Prism', 'Clean Workspace', 'Vaporwave Glitch');
   }
-
-  // Art, Print & Home
-  else if (p.includes('poster') || p.includes('canvas') || p.includes('pillow') || p.includes('wall') || p.includes('notebook') || p.includes('tote')) {
-    productSpecific.push('Mid-Century Modern', 'Industrial Loft', 'Scandi-Minimalism', 'Gallery Exhibition', 'Bohemian Interior');
+  else if (p.includes('poster') || p.includes('canvas') || p.includes('print') || p.includes('art')) {
+    productSpecific.push('Gallery Exhibition', 'Mid-Century Modern', 'Industrial Loft', 'Risograph Style', 'Museum Lighting');
   }
-
-  // Stickers & Small Goods
+  else if (p.includes('sticker') || p.includes('pin') || p.includes('button') || p.includes('badge')) {
+    productSpecific.push('Die-Cut Vinyl', 'Pop Art Aesthetic', 'Retro Enamel Badge', 'Holographic Foil', 'Sticker Bomb');
+  }
   else {
-    productSpecific.push('Prismatic Holographic', 'Die-Cut Vinyl', 'Macro Depth', 'Street Art Wheatpaste', 'Retro Badge');
+    productSpecific.push('Luxury Branding', 'Macro Material Detail', 'Lifestyle Interior', 'Abstract Geometric', 'Ethereal Glow');
   }
 
   return { trending, productSpecific };
@@ -58,22 +51,43 @@ const getProductSuggestions = (productName: string): string[] => {
     "Luxury branding with deep matte textures and sophisticated rim lighting",
     "Surreal floating composition with abstract geometric shapes and soft pastel gradients",
     "Hyper-realistic macro photography focusing on premium material grain and intricate details",
-    "Bauhaus-inspired design with bold primary colors and strong mathematical grid layout"
   ];
 
-  if (p.includes('shirt') || p.includes('hoodie') || p.includes('socks')) {
+  if (p.includes('shirt') || p.includes('hoodie')) {
     return [
       ...universalStyles,
       "Gritty urban techwear aesthetic with rain-slicked concrete and neon blue backlight",
-      "Vintage 1990s hip-hop fashion photography with heavy film grain and warm nostalgic tones",
-      "High-fashion editorial spread with dramatic lighting and a clean, minimalist cyclorama wall"
+      "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones",
+      "Minimalist high-fashion editorial spread with dramatic shadows and a clean cyclorama wall",
+      "Grunge aesthetic with distressed textures, moody lighting, and underground club vibes"
+    ];
+  }
+
+  if (p.includes('mug') || p.includes('bottle') || p.includes('cup')) {
+    return [
+      ...universalStyles,
+      "Cozy morning setup in a sun-drenched minimalist cafe with soft steam rising",
+      "Dark academia aesthetic featuring old books, candle-light, and rich wooden textures",
+      "Nordic kitchen scene with clean white surfaces, natural linen, and soft diffused daylight",
+      "Minimalist ceramic focus with a smooth matte finish and sharp architectural shadows"
+    ];
+  }
+
+  if (p.includes('poster') || p.includes('canvas') || p.includes('print')) {
+    return [
+      ...universalStyles,
+      "Contemporary art gallery setting with track lighting and high ceilings",
+      "Industrial loft interior with exposed brick, large windows, and mid-century furniture",
+      "Clean museum wall with professional framing and precise spotlighting",
+      "Modern home office with Scandi-minimalist decor and soft plant shadows"
     ];
   }
 
   return [
     ...universalStyles,
-    "Interior design magazine layout featuring a sun-drenched Scandinavian living room",
-    "Moody industrial loft interior with exposed red brick walls and focused spot lighting"
+    "Interior design magazine layout featuring a sun-drenched modern living room",
+    "Cyberpunk inspired product shot with vibrant magenta and teal accents",
+    "Sophisticated boutique display with velvet surfaces and warm ambient lighting"
   ];
 };
 
@@ -90,12 +104,12 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
 
   return (
     <div className="space-y-4">
-      {/* Search/Input Field */}
       <div className="flex gap-2 items-start">
         <div className="flex-1">
           <Tooltip content="Describe the mood, lighting, or setting for your mockup">
              <div className="w-full">
                 <Input
+                    label="Custom Style Prompt"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={`Describe ${productName.toLowerCase()} style...`}
@@ -107,27 +121,29 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
         <Tooltip content={`Generate a professional creative prompt`} side="left">
           <button
             onClick={handleSuggest}
-            className="shrink-0 h-[42px] px-4 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm group"
             type="button"
+            aria-label="Generate style suggestion"
+            className="shrink-0 h-[42px] px-4 mt-[22px] bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm group focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+            <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" aria-hidden="true" />
             <span className="hidden sm:inline font-bold text-[10px] uppercase tracking-wider">Magic</span>
           </button>
         </Tooltip>
       </div>
       
-      {/* Trending / Core Presets */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-2 px-1">
-           <Zap className="w-3 h-3 text-amber-500" />
-           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Trending Styles</span>
+           <Zap className="w-3 h-3 text-amber-500" aria-hidden="true" />
+           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Trends</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" role="list">
           {trending.map((style) => (
             <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
               <button
+                type="button"
                 onClick={() => onChange(style)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                aria-pressed={isActive(style)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   isActive(style)
                     ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' 
                     : 'bg-slate-900/40 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
@@ -140,18 +156,19 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
         </div>
       </div>
 
-      {/* Product Specific Recommendations */}
       <div className="space-y-2.5 pt-1">
         <div className="flex items-center gap-2 px-1">
-           <Palette className="w-3 h-3 text-indigo-500" />
-           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Curated for {productName}</span>
+           <Palette className="w-3 h-3 text-indigo-500" aria-hidden="true" />
+           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Thematic Suggestions</span>
         </div>
-        <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar" role="list">
           {productSpecific.map((style) => (
             <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
               <button
+                type="button"
                 onClick={() => onChange(style)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                aria-pressed={isActive(style)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   isActive(style)
                     ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-900/20' 
                     : 'bg-slate-900/40 text-slate-400 border-slate-800 hover:border-slate-600 hover:text-slate-200'
