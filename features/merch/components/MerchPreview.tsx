@@ -157,7 +157,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full gap-6 p-1">
+    <div className="flex flex-col h-full gap-8 p-1">
       <div className="bg-[#05070a] rounded-[3rem] border border-slate-800 p-0.5 relative overflow-hidden flex flex-col flex-1 shadow-inner group/preview">
         <div className="absolute top-8 left-8 z-20 flex flex-wrap items-center gap-3">
           <Badge variant="blue" icon={<Zap className="w-3 h-3" />}>RENDER: {productName}</Badge>
@@ -265,7 +265,17 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
           </div>
         )}
       </div>
-      <MerchVariations variations={variations} isGenerating={isGeneratingVariations} activeImage={activeImage} resultImage={resultImage} onViewImage={setViewImage} />
+
+      {/* Variation Section Integration */}
+      <MerchVariations 
+        variations={variations} 
+        isGenerating={isGeneratingVariations} 
+        activeImage={activeImage} 
+        resultImage={resultImage} 
+        onViewImage={setViewImage}
+        onGenerate={onGenerateVariations}
+        disabled={loading}
+      />
     </div>
   );
 };

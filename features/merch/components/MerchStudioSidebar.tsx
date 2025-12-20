@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings2, RotateCcw, Layers, Sparkles, Lightbulb } from 'lucide-react';
+import { Settings2, RotateCcw, Layers, Sparkles, Lightbulb, Grid } from 'lucide-react';
 import { Tooltip, Button, Alert } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
 import { ProductGrid } from './ProductGrid';
@@ -114,6 +114,25 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
               onChange={onTextOverlayChange}
               disabled={!logoImage}
             />
+          </StepSection>
+
+          <StepSection number={6} title="Style Variants" badge="AI Powered">
+             <div className="space-y-4">
+               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed px-1">
+                 Synthesize 3 additional mockup variations with slightly modified camera angles and studio lighting setups.
+               </p>
+               <Button 
+                  variant="outline"
+                  onClick={onGenerateVariations}
+                  loading={isGeneratingVariations}
+                  disabled={!resultImage || loading}
+                  icon={<Grid className="w-4 h-4" />}
+                  className="w-full h-12 rounded-xl text-[9px] tracking-widest uppercase font-black border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/5"
+                  aria-label="Generate alternate takes"
+               >
+                 Explore Variations
+               </Button>
+             </div>
           </StepSection>
 
           {activeError && (
