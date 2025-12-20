@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
 import { AppError, ApiError, AuthenticationError, SafetyError, RateLimitError } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
@@ -59,12 +58,33 @@ class AICoreService {
 
   private normalizeError(error: any): AppError {
     if (error instanceof AppError) return error;
+    
     const message = error?.message || String(error);
     const status = error?.status || error?.response?.status;
+    const lowerMsg = message.toLowerCase();
 
+    // Map HTTP Statuses
     if (status === 429) return new RateLimitError();
-    if (status === 401 || status === 403) return new AuthenticationError();
-    if (message.toLowerCase().includes("safety")) return new SafetyError("Safety policy violation detected at current depth.");
+    if (status === 401 || status === 403) {
+      if (lowerMsg.includes("not found") || lowerMsg.includes("billing")) {
+        return new AuthenticationError(`ACCOUNT_ERROR: ${message}`);
+      }
+      return new AuthenticationError();
+    }
+
+    // Map Specific Gemini Failure Modes
+    if (lowerMsg.includes("safety") || lowerMsg.includes("blocked") || lowerMsg.includes("candidate")) {
+      return new SafetyError(`SAFETY_BLOCK: ${message}`);
+    }
+
+    if (lowerMsg.includes("overloaded") || lowerMsg.includes("503") || lowerMsg.includes("capacity")) {
+      return new ApiError(`SYSTEM_OVERLOAD: ${message}`, 503);
+    }
+
+    if (lowerMsg.includes("dimension") || lowerMsg.includes("resolution") || lowerMsg.includes("too large")) {
+      return new ApiError(`RESOURCE_LIMIT: ${message}`, 400);
+    }
+
     return new ApiError(message, status || 500);
   }
 
@@ -83,10 +103,20 @@ class AICoreService {
       } catch (error) {
         lastError = error;
         const normalized = this.normalizeError(error);
-        if (normalized instanceof SafetyError || normalized instanceof AuthenticationError) throw normalized;
+        
+        // Critical failures that shouldn't be retried
+        if (
+          normalized instanceof SafetyError || 
+          normalized instanceof AuthenticationError || 
+          (normalized instanceof ApiError && normalized.statusCode === 400)
+        ) {
+          throw normalized;
+        }
 
         if (attempt < retries) {
-          await this.sleep(Math.pow(2, attempt) * 1000);
+          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500);
+          logger.warn(`AICore Retry ${attempt + 1}/${retries}: ${normalized.message}`);
+          await this.sleep(delay);
           continue;
         }
       }
@@ -113,13 +143,10 @@ class AICoreService {
       seed: config.seed,
     };
 
-    // EDGE CASE: Thinking Budget Coordination
-    // If maxOutputTokens is provided, we must ensure thinkingBudget is lower to avoid empty responses.
     if (config.thinkingBudget !== undefined) {
       const budget = config.thinkingBudget;
       generationConfig.thinkingConfig = { thinkingBudget: budget };
       if (config.maxOutputTokens) {
-        // Reserve at least 25% for output if not specified
         generationConfig.maxOutputTokens = Math.max(config.maxOutputTokens, budget + 100);
       }
     } else if (config.maxOutputTokens) {

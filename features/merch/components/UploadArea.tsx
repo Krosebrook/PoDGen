@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Spinner } from '@/shared/components/ui/Spinner';
@@ -89,12 +88,12 @@ export const UploadArea: React.FC<UploadAreaProps> = ({
       ) : image ? (
          <div className={`relative border border-slate-600 rounded-lg overflow-hidden group bg-slate-900/50 aspect-video flex items-center justify-center transition-all ${isDragging ? 'border-blue-500 scale-[1.02] ring-4 ring-blue-500/10' : ''}`}>
            <img src={image} alt="Uploaded asset preview" className="max-w-full max-h-full object-contain" />
-           <Tooltip content="Replace this image">
+           <Tooltip content="Choose a different image file to replace the current design asset">
               <button 
                 type="button"
                 className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity focus:opacity-100 outline-none" 
                 onClick={() => inputRef.current?.click()}
-                aria-label="Replace image"
+                aria-label="Replace current image"
               >
                 <span className="text-white text-sm font-medium flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-600 shadow-lg">
                   <Upload className="w-4 h-4" aria-hidden="true" /> Change Image
@@ -103,7 +102,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({
            </Tooltip>
            {onClear && (
              <div className="absolute top-2 right-2 z-10">
-               <Tooltip content="Remove image" side="left">
+               <Tooltip content="Clear this asset and reset the upload state for a fresh start" side="left">
                  <button 
                    type="button"
                    onClick={handleClear}
@@ -117,7 +116,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({
            )}
          </div>
       ) : (
-         <Tooltip content="Click or drag to upload file">
+         <Tooltip content="Click to browse or drag and drop an image file (PNG, JPG, or WEBP) to use in your design">
            <button 
              type="button"
              onClick={() => inputRef.current?.click()}

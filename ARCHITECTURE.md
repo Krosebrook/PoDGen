@@ -1,53 +1,72 @@
-# Architecture Documentation
+# Architecture & Design Patterns
 
-## Overview
+NanoGen Studio represents a significant shift towards **AI-First UX**. This document outlines the core architectural pillars that ensure the application remains performant, secure, and extensible.
 
-NanoGen Studio is designed as a client-side heavy application that leverages the Gemini API directly. This decision allows for rapid prototyping and zero-backend deployment, though production usage would typically require a proxy server for key management.
+## 1. Domain-Driven Module Structure
 
-## Module Structure
-
-We utilize a **Feature-Based** directory structure to ensure scalability and maintainability.
+The project utilizes a **Feature-Based Architecture**. Unlike standard flat structures, this groups logic, components, and hooks by domain to prevent "spaghetti" dependencies.
 
 ```
 src/
-├── features/           # Domain-specific modules
-│   ├── editor/         # Image Editor feature
-│   ├── merch/          # Merch Studio feature
-│   └── integrations/   # Integration tools
-├── shared/             # Shared resources
-│   ├── components/     # UI Library (Atomic design)
-│   ├── hooks/          # Custom hooks (useGenAI)
-│   ├── utils/          # Pure functions
-│   └── types/          # Global types
-└── services/           # External API Clients
+├── features/               # High-level domain logic
+│   ├── editor/             # Image manipulation & analysis
+│   ├── merch/              # Product mockup synthesis
+│   └── integrations/       # External connectivity tools
+├── shared/                 # Universal primitives
+│   ├── components/ui/      # Atomic UI Library (Design System)
+│   ├── hooks/              # Global state & side-effect managers
+│   └── utils/              # Pure utility functions (Canvas, Image, File)
+└── services/               # Core Infrastructure
+    ├── ai-core.ts          # Central Gemini API Facade
+    └── logger.ts           # Unified telemetry & logging
 ```
 
-## Design Decisions
+## 2. AI Core Service (`AICoreService`)
 
-### 1. Direct API Calls
-- **Decision**: Call Google GenAI SDK directly from the browser.
-- **Reasoning**: Reduces infrastructure complexity for the prototype phase.
-- **Trade-off**: API Key is exposed in client bundle (acceptable for internal tools/prototypes, requires proxy for public prod).
+The `AICoreService` is the heartbeat of the application. It encapsulates the complexities of the Gemini API into a predictable, robust interface.
 
-### 2. Custom Hooks for Logic
-- **Decision**: Encapsulate AI logic in `useGenAI` and state in `useMerchState`.
-- **Reasoning**: Decouples UI from business logic, making components purely presentational and easier to test.
+### Key Capabilities:
+- **Lazy Initialisation**: Client instances are created only when an active request is initiated.
+- **Exponential Backoff**: Robust retry logic (default 2 retries) with jitter to handle `429 Rate Limit` and `503 Service Unavailable` errors.
+- **Safety Normalization**: Intercepts and formats "Safety Blocks" into user-friendly diagnostic messages.
+- **Coordinate Clamping**: Ensures that prompt parameters (like image dimensions) adhere to model constraints (e.g., 1K/2K/4K limits).
 
-### 3. Shared UI Library
-- **Decision**: Build small, atomic components (`Button`, `Input`, `Card`) in `shared/ui`.
-- **Reasoning**: Ensures visual consistency and reduces Tailwind class duplication across features.
+## 3. Mockup Synthesis Pipeline
 
-## Data Flow
+The mockup pipeline leverages **Gemini 2.5 Flash Image** for context-aware texture mapping and environmental integration.
 
-1. **User Action**: User uploads file / enters prompt.
-2. **State Update**: React State (via Hooks) updates local variables.
-3. **Service Call**: `useGenAI` calls `services/gemini.ts`.
-4. **API Interaction**: `GoogleGenAI` SDK contacts Gemini 2.5 Flash.
-5. **Response**: Base64 image returned and stored in state.
-6. **Render**: UI updates to show result or error.
+### Technical Flow:
+- **Logo Integration**: Dynamically projects 2D brand assets onto surfaces while respecting curvature, lighting, and material properties.
+- **Scene Analysis**: Analyzes environmental lighting vectors to match shadows and color grading between mockup and background.
 
-## Security Model
+## 4. Canvas Synthesis Engine (`saveImage`)
 
-- **Input Validation**: All files are validated for size (5MB limit) and MIME type before processing.
-- **Sanitization**: Error messages are sanitized to prevent leaking stack traces to the user.
-- **Type Safety**: Strict TypeScript interfaces prevents runtime errors.
+When a user exports a "Master" file, the application bypasses the standard DOM and uses a high-precision `2D Canvas` engine.
+
+- **Multi-Layer Composition**: Blends the AI-generated base, the dynamic typography layer, and any legibility masks into a single raster.
+- **Resolution Scaling**: Supports up-sampling during export to ensure crisp prints even if the viewport preview is low-res.
+- **Edge-Case Protection**: Implements dimension clamping (8192px limit) to prevent browser memory exhaustion on high-scale exports.
+
+## 5. State Management & Lifecycle
+
+We strictly avoid global state stores (Redux/MobX) in favor of **Feature-Specific Controllers** (e.g., `useMerchController`).
+
+- **Single Source of Truth**: Assets (Logo, Background) are managed at the feature root and passed down via props.
+- **Cancellation Pattern**: Uses `AbortController` to cancel stale AI requests when a user rapidly changes settings or switches tabs.
+- **UI Synchronization**: `loading` and `error` states are granular, allowing parts of the UI to remain interactive while the AI pipeline is running.
+
+## 6. UX & Accessibility Principles
+
+- **Functional Tooltips**: Every button has a tooltip that describes the *function* ("Execute Synthesis") rather than just the *label* ("Generate").
+- **Contrast Ratios**: All text elements adhere to WCAG 2.1 contrast standards (min 4.5:1).
+- **Reduced Motion**: Respects browser `prefers-reduced-motion` settings for all transition animations.
+
+## 7. Security Model
+
+- **Key Management**: All requests use `process.env.API_KEY`.
+- **Sanitization**: All base64 data is cleaned of header junk before transmission.
+- **Validation**: Strict file size (5MB) and MIME type (PNG/JPG/WEBP) checks are enforced at the browser boundary.
+
+---
+
+*This architecture is designed to evolve. As the Gemini model capabilities expand, the modular nature of the Studio ensures we can integrate new modalities (Video, Audio) with minimal friction.*

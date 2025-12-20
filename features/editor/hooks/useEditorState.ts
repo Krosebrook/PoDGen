@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { aiCore, AIModelType, AspectRatio, ImageSize } from '@/services/ai-core';
 import { readImageFile } from '@/shared/utils/file';
@@ -47,6 +46,7 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
   };
 
   const processFile = useCallback(async (file: File) => {
+    setLoading(true);
     setError(null);
     try {
       logger.info(`Processing file: ${file.name}`);
@@ -57,6 +57,8 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
       setGroundingSources([]);
     } catch (err: any) {
       setError(err.message || "Failed to process image.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 

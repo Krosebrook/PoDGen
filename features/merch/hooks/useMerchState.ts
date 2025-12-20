@@ -16,6 +16,9 @@ export interface TextOverlayState {
   y: number;
   align: 'left' | 'center' | 'right';
   rotation: number;
+  skewX: number;
+  underline: boolean;
+  strikethrough: boolean;
   opacity: number;
   bgEnabled: boolean;
   bgColor: string;
@@ -40,6 +43,9 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     y: 50, 
     align: 'center', 
     rotation: 0, 
+    skewX: 0,
+    underline: false,
+    strikethrough: false,
     opacity: 100,
     bgEnabled: false,
     bgColor: '#000000',
@@ -67,7 +73,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   const handleAssetUpload = useCallback(async (file: File, type: 'logo' | 'bg') => {
     setLoadingAssets(prev => ({ ...prev, [type]: true }));
     setError(null);
-    logger.info(`Depth Asset Upload: ${type} initiated`);
+    logger.info(`Asset Upload: ${type} initiated`);
 
     try {
       const base64 = await readImageFile(file);
@@ -92,7 +98,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     setVariations([]);
     activeTaskRef.current = true;
     
-    logger.info("Executing Primary Depth Generation");
+    logger.info("Executing Primary Mockup Generation");
 
     try {
       const prompt = constructMerchPrompt(config.product, config.style, !!assets.bg);
@@ -106,7 +112,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
       }
     } catch (err: any) {
       if (activeTaskRef.current) {
-        setError(err.message || "Pipeline stall during generation.");
+        setError(err.message || "Pipeline interrupt during generation.");
       }
     } finally {
       if (activeTaskRef.current) {
@@ -121,7 +127,8 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
 
     setIsGeneratingVariations(true);
     setError(null);
-    logger.info("Matrix Generation: Requesting alternate takes");
+    setVariations([]); // Clear old ones before starting
+    logger.info("Variation Pipeline: Requesting alternate mockup takes");
 
     try {
       const prompts = getVariationPrompts(config.product, config.style, !!assets.bg);
@@ -131,7 +138,7 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
           model: 'gemini-2.5-flash-image',
           maxRetries: 1
         }).catch(err => {
-          logger.warn("Matrix Node Failure:", err);
+          logger.warn("Variation Node Failure:", err);
           return null;
         }))
       );
@@ -143,10 +150,10 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
       setVariations(images);
       
       if (images.length === 0) {
-        setError("Matrix Synthesis Failed: No alternate valid candidates generated.");
+        setError("Variation Synthesis Failed: No alternate valid mockup candidates generated.");
       }
     } catch (err: any) {
-      setError(err.message || "Matrix pipeline failed.");
+      setError(err.message || "Variation pipeline failed.");
     } finally {
       setIsGeneratingVariations(false);
     }

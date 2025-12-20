@@ -1,66 +1,73 @@
-# NanoGen Studio
+# NanoGen Studio 2.5 ⚡️
 
-NanoGen Studio is a powerful AI creative suite powered by **Gemini 2.5 Flash Image**. It allows users to edit images with natural language prompts and generate professional merch mockups on demand.
+A world-class AI-native creative suite for rapid product visualization and advanced image synthesis, powered by the **Gemini 2.5 Flash Image** model. NanoGen Studio bridges the gap between raw brand assets and production-ready marketing materials through a seamless, high-fidelity interface.
 
-## Tech Stack
+## 🚀 Key Value Propositions
 
-- **Frontend**: React 19 + TypeScript
-- **Styling**: Tailwind CSS
-- **AI**: Google GenAI SDK (`@google/genai`)
-- **Icons**: Lucide React
-- **Build**: Vite
+- **Zero-Latency Visualization**: Transform flat logos into cinematic product mockups in seconds.
+- **Creative Intelligence**: Leverage deep reasoning for complex image editing and contextual analysis.
+- **Production-Ready Exports**: High-precision canvas engine for generating high-resolution master files.
+- **Developer-First API**: Integrated code generation for cURL, Node.js, and Python workflows.
 
-## Getting Started
+## 🛠 Feature Deep-Dive
+
+### 1. Creative Editor (Gemini 2.5/3.0 Hybrid)
+The Creative Editor is a state-of-the-art canvas for non-destructive image manipulation.
+- **Semantic Editing**: "Add a sci-fi HUD," "Convert to oil painting," or "Remove background" via natural language.
+- **Deep Reasoning**: Enable "Thinking Mode" for complex, multi-step artistic instructions.
+- **Search Grounding**: Inject real-world context into generated images using Google Search integration.
+- **Contextual Analysis**: Generate detailed artistic reports and composition breakdowns of your source assets.
+
+### 2. Merch Studio (AI Pipeline)
+A dedicated environment for brand expansion and physical product previewing.
+- **Variation Synthesis**: Generate 3 alternative camera angles and lighting setups simultaneously.
+- **Dynamic Typography**: Add, drag, and style high-resolution text overlays with legibility masks.
+- **Contextual Styles**: AI-generated style presets tailored to specific product categories (e.g., "Streetwear Grunge" for hoodies).
+
+### 3. Integration Hub
+Standardize your AI pipeline for downstream systems.
+- **Instant Code Snippets**: Pre-configured templates for cURL, Node.js, and Python.
+- **Platform Connectors**: Ready-to-use logic for Discord Webhooks, AWS S3, and generic REST backends.
+
+## 🏗 Technical Architecture
+
+NanoGen Studio follows a **Feature-Based Module Pattern** to ensure strict separation of concerns and extreme performance.
+
+- **Frontend**: React 19 (Concurrent Mode) + TypeScript
+- **Styling**: Tailwind CSS 3.4 (Design System Utility approach)
+- **AI Integration**: `@google/genai` (Google Generative AI SDK)
+- **State Management**: Domain-specific custom hooks with AbortController synchronization
+
+## 🚦 Getting Started
 
 ### Prerequisites
-
-- Node.js 18+
-- pnpm or npm
-- A Google Gemini API Key
+- Node.js 20.x or higher
+- A valid Google Gemini API Key
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+1. **Clone & Install**:
    ```bash
+   git clone https://github.com/your-repo/nanogen-studio.git
+   cd nanogen-studio
    npm install
    ```
-3. Create a `.env` file based on `.env.example`:
+
+2. **Environment Setup**:
+   Ensure `process.env.API_KEY` is configured in your environment or provided via the runtime injector.
+
+3. **Development Mode**:
    ```bash
-   cp .env.example .env
+   npm run dev
    ```
-4. Add your API Key to the `.env` file.
 
-### Running the App
+## 📜 Compliance & Accessibility
+NanoGen Studio is built with **WCAG 2.1 AA** compliance in mind:
+- **ARIA-Landmarks**: Distinct regions for Sidebar, Viewport, and Navigation.
+- **Focus Management**: Controlled focus loops in configuration panels.
+- **Semantic Tooltips**: Every interactive element includes a functional explanation.
+- **Responsive Layout**: Fluid grid system that adapts from mobile inspection to desktop editing.
 
-```bash
-npm run dev
-```
+---
 
-## Features
-
-### 1. AI Image Editor
-- Drag & Drop interface
-- Natural language editing (e.g., "Add a retro filter")
-- Real-time feedback
-
-### 2. Merch Studio
-- Upload brand assets (Logo, Background)
-- Select from 15+ premium products (T-Shirts, Mugs, etc.)
-- Customizable style preferences
-- High-resolution generation
-
-### 3. API Integration
-- Generate code snippets for cURL, Node.js, Python
-- Webhook integration support
-- Cloud storage templates (S3)
-
-## Architecture
-
-The project follows a **Feature-Based Architecture**:
-
-- `features/`: Contains domain-specific logic (Editor, Merch, Integrations).
-- `shared/`: Contains reusable primitives (UI, Hooks, Utils).
-- `services/`: Encapsulates external API logic (Gemini).
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for deeper details.
+*Built with ❤️ by the NanoGen Engineering Team.*

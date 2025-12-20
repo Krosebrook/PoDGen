@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
-import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError } from '../shared/utils/errors';
+import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError, ValidationError } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
 
 interface RequestOptions {
@@ -20,6 +20,8 @@ interface TextPart {
 }
 
 type ModelPart = ImagePart | TextPart;
+
+const SUPPORTED_INPUT_MIMES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/heic'];
 
 class GeminiService {
   private static instance: GeminiService;
@@ -63,6 +65,7 @@ class GeminiService {
 
     const msg = error instanceof Error ? error.message : String(error);
     const status = (error as any)?.status || (error as any)?.response?.status;
+    const lowerMsg = msg.toLowerCase();
 
     if (error instanceof Error && (error.name === 'AbortError' || msg.includes('aborted'))) {
       return new ApiError("Request cancelled by user.", 499);
@@ -72,24 +75,25 @@ class GeminiService {
       return new RateLimitError();
     }
     
-    if (status === 401 || status === 403 || msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("api key")) {
-      return new AuthenticationError("Access denied. Please check your API key configuration.");
+    if (status === 401 || status === 403 || lowerMsg.includes("api key") || lowerMsg.includes("authentication")) {
+      return new AuthenticationError("Access denied. Please check your API key configuration and project permissions.");
     }
 
-    if (status === 503 || msg.includes("503") || msg.includes("overloaded")) {
-      return new ApiError("The model is currently overloaded. Please try again in a few moments.", 503);
+    if (status === 503 || lowerMsg.includes("503") || lowerMsg.includes("overloaded") || lowerMsg.includes("capacity")) {
+      return new ApiError("The AI model is currently at maximum capacity. Please wait a moment before retrying.", 503);
     }
 
     if (
-      msg.toLowerCase().includes("safety") || 
-      msg.toLowerCase().includes("blocked") || 
-      msg.toLowerCase().includes("policy")
+      lowerMsg.includes("safety") || 
+      lowerMsg.includes("blocked") || 
+      lowerMsg.includes("policy") ||
+      lowerMsg.includes("restricted")
     ) {
-      return new SafetyError("The request was blocked by safety filters. Please verify your prompt and source image.");
+      return new SafetyError("The request was blocked by Gemini safety filters. This often happens with human faces or sensitive branding. Try simplifying your prompt.");
     }
 
-    if (status === 400 || msg.includes("400")) {
-      return new ApiError("Invalid request. The image format or prompt might be unsupported.", 400);
+    if (status === 400 || lowerMsg.includes("400") || lowerMsg.includes("invalid") || lowerMsg.includes("format")) {
+      return new ApiError(`Invalid request: ${msg}. Verify image formats and prompt complexity.`, 400);
     }
 
     return new ApiError(msg, status || 500);
@@ -108,7 +112,9 @@ class GeminiService {
       if (
         mappedError instanceof AuthenticationError ||
         mappedError instanceof SafetyError || 
-        (mappedError instanceof ApiError && mappedError.statusCode === 499)
+        mappedError instanceof ValidationError ||
+        (mappedError instanceof ApiError && mappedError.statusCode === 499) ||
+        (mappedError instanceof ApiError && mappedError.statusCode === 400)
       ) {
         throw mappedError;
       }
@@ -125,6 +131,13 @@ class GeminiService {
     }
   }
 
+  private validateImageFormat(b64: string) {
+    const mime = getMimeType(b64);
+    if (!SUPPORTED_INPUT_MIMES.includes(mime)) {
+      throw new ValidationError(`Unsupported image format: ${mime}. Gemini currently supports: ${SUPPORTED_INPUT_MIMES.join(', ')}.`);
+    }
+  }
+
   /**
    * Constructs the payload parts for the API request.
    */
@@ -132,6 +145,7 @@ class GeminiService {
     const parts: ModelPart[] = [];
 
     // 1. Main Image
+    this.validateImageFormat(mainImageBase64);
     parts.push({
       inlineData: {
         data: cleanBase64(mainImageBase64),
@@ -141,6 +155,7 @@ class GeminiService {
 
     // 2. Additional Images
     additionalImagesBase64.forEach((img) => {
+      this.validateImageFormat(img);
       parts.push({
         inlineData: {
           data: cleanBase64(img),
@@ -205,13 +220,13 @@ class GeminiService {
           }
           
           if (response.candidates[0].finishReason === "SAFETY") {
-            throw new SafetyError("Generation stopped due to safety concerns.");
+            throw new SafetyError("Generation was blocked by Google's safety policy. This usually happens if the AI detects faces, people, or restricted branding in the source or generated result.");
           }
         }
         
-        throw new ApiError("No image generated. The model returned a response without image data.", 422);
+        throw new ApiError("No image was synthesized. The model returned a valid response but without image fragments.", 422);
       } finally {
-        // Cleanup if necessary (listeners are mostly self-cleaning with { once: true })
+        // Cleanup handled by promise racing
       }
     });
   }
@@ -222,8 +237,6 @@ class GeminiService {
     additionalImagesBase64: string[] = [],
     options: RequestOptions = {}
   ): Promise<string[]> {
-    // Process batch with Promise.allSettled to allow partial success,
-    // though for this UI we typically want the successful ones.
     const promises = prompts.map(prompt => 
       this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64, options)
         .catch(err => {

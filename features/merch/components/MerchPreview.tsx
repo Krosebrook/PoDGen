@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Spinner, Button, Tooltip, Badge } from '@/shared/components/ui';
-import { ShoppingBag, Download, AlertCircle, Lightbulb, Sparkles, Move, Zap } from 'lucide-react';
+import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, CheckCircle2, FileDown } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
 import { TextOverlayState } from '../hooks/useMerchState';
@@ -36,7 +35,9 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   onTextOverlayChange
 }) => {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
+  const [jpgQuality, setJpgQuality] = useState(90);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{current: number, total: number} | null>(null);
   const [viewImage, setViewImage] = useState<string | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,15 +48,33 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
 
   const activeImage = viewImage || resultImage;
 
-  const handleExport = async (img: string) => {
+  const handleExport = async (img: string, label: string = 'master') => {
     setIsExporting(true);
-    const filename = `master-${productId}-${Date.now()}`;
+    const filename = `${label}-${productId}-${Date.now()}`;
     try {
-      await saveImage(img, filename, exportFormat, 2, textOverlay);
+      await saveImage(img, filename, exportFormat, 2, textOverlay, jpgQuality / 100);
     } catch (err) {
       console.error("EXPORT_FAILURE:", err);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportAllVariations = async () => {
+    if (variations.length === 0) return;
+    setIsExporting(true);
+    setExportProgress({ current: 0, total: variations.length });
+    
+    try {
+      for (let i = 0; i < variations.length; i++) {
+        setExportProgress({ current: i + 1, total: variations.length });
+        await saveImage(variations[i], `variation-${i+1}-${productId}`, exportFormat, 2, textOverlay, jpgQuality / 100);
+        // Small delay to prevent browser download queue issues
+        await new Promise(r => setTimeout(r, 400));
+      }
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportProgress(null), 2000);
     }
   };
 
@@ -101,29 +120,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     }
   }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!textOverlay || !onTextOverlayChange) return;
-    
-    const step = e.shiftKey ? 5 : 1;
-    let newX = textOverlay.x;
-    let newY = textOverlay.y;
-
-    switch (e.key) {
-      case 'ArrowLeft': newX -= step; break;
-      case 'ArrowRight': newX += step; break;
-      case 'ArrowUp': newY -= step; break;
-      case 'ArrowDown': newY += step; break;
-      default: return;
-    }
-
-    e.preventDefault();
-    onTextOverlayChange({
-      ...textOverlay,
-      x: Math.max(0, Math.min(100, newX)),
-      y: Math.max(0, Math.min(100, newY))
-    });
-  };
-
   useEffect(() => {
     if (isDraggingText) {
       window.addEventListener('mousemove', handleTextDragMove);
@@ -166,6 +162,11 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
         <div className="absolute top-8 left-8 z-20 flex flex-wrap items-center gap-3">
           <Badge variant="blue" icon={<Zap className="w-3 h-3" />}>RENDER: {productName}</Badge>
           {stylePreference && <Badge variant="indigo">STYLE: {stylePreference}</Badge>}
+          {exportProgress && (
+            <Badge variant="success" icon={<FileDown className="w-3 h-3 animate-bounce" />}>
+              EXPORTING: {exportProgress.current}/{exportProgress.total}
+            </Badge>
+          )}
         </div>
 
         <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden group/canvas">
@@ -181,10 +182,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
                  <div
                    ref={textRef}
                    onMouseDown={handleTextDragStart}
-                   onKeyDown={handleKeyDown}
-                   tabIndex={0}
-                   role="button"
-                   aria-label="Interactive text overlay. Use arrow keys to move."
                    className={`absolute cursor-grab active:cursor-grabbing select-none whitespace-pre-wrap z-30 transition-all focus:ring-2 focus:ring-blue-500 rounded px-1 ${isDraggingText ? 'scale-105' : ''}`}
                    style={{
                      left: `${textOverlay.x}%`,
@@ -207,6 +204,11 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-6" aria-hidden="true" />
               <h2 className="text-xl font-black text-white mb-4 uppercase tracking-tighter">System Interrupt</h2>
               <p className="text-slate-500 text-xs mb-8 leading-relaxed font-medium">{error}</p>
+              {errorSuggestion && (
+                <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 text-[10px] text-blue-400 font-bold uppercase tracking-widest">
+                  {errorSuggestion}
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center opacity-20">
@@ -217,10 +219,48 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
         </div>
 
         {activeImage && (
-          <div className="p-8 bg-slate-900/50 backdrop-blur-2xl border-t border-slate-800 flex justify-between items-center">
-            <Button variant="outline" onClick={onGenerateVariations} loading={isGeneratingVariations} icon={<Sparkles className="w-4 h-4" />}>Matrix Takes</Button>
-            <div className="flex gap-4">
-              <Button onClick={() => handleExport(activeImage)} loading={isExporting} icon={<Download className="w-4 h-4" />}>Master Export</Button>
+          <div className="p-8 bg-slate-900/50 backdrop-blur-2xl border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-4 bg-slate-800/50 p-2 rounded-2xl border border-slate-700">
+              <div className="flex gap-1 p-1 bg-slate-900 rounded-xl">
+                {(['png', 'jpg', 'webp'] as ExportFormat[]).map(fmt => (
+                  <button
+                    key={fmt}
+                    onClick={() => setExportFormat(fmt)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportFormat === fmt ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    {fmt}
+                  </button>
+                ))}
+              </div>
+              {exportFormat !== 'png' && (
+                <div className="flex items-center gap-3 px-2 border-l border-slate-700">
+                  <Tooltip content="Adjust export quality vs file size balance">
+                    <div className="flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                      <input 
+                        type="range" min="10" max="100" value={jpgQuality} 
+                        onChange={(e) => setJpgQuality(parseInt(e.target.value))}
+                        className="w-20 accent-blue-600 h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-[10px] font-mono text-blue-400 font-black min-w-[2.5rem]">{jpgQuality}%</span>
+                    </div>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Tooltip content="Generate alternative mockup variations with different lighting and angles" side="top">
+                <Button variant="outline" onClick={onGenerateVariations} loading={isGeneratingVariations} icon={<Sparkles className="w-4 h-4" />}>Variations</Button>
+              </Tooltip>
+              {variations.length > 0 && (
+                <Tooltip content="Batch export all generated variations at once in the selected format" side="top">
+                  <Button variant="secondary" onClick={handleExportAllVariations} loading={isExporting && !!exportProgress} icon={<Layers className="w-4 h-4" />}>Export All</Button>
+                </Tooltip>
+              )}
+              <Tooltip content="Download current master mockup at high resolution" side="top">
+                <Button onClick={() => handleExport(activeImage)} loading={isExporting && !exportProgress} icon={<Download className="w-4 h-4" />}>Export</Button>
+              </Tooltip>
             </div>
           </div>
         )}

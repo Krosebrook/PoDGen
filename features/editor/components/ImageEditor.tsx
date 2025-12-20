@@ -1,4 +1,3 @@
-
 import React, { Suspense, useState } from 'react';
 import { useEditorState } from '../hooks/useEditorState';
 import { ImageDropzone } from './ImageDropzone';
@@ -85,6 +84,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
             onFileSelect={processFile}
             onReset={handleReset}
             error={error}
+            loading={loading && !resultImage && !analysisResult && prompt === ''}
           />
 
           <Card className={`shadow-xl bg-slate-800/50 border-slate-700 transition-all ${isDraggingOverPrompt ? 'ring-2 ring-blue-500 scale-[1.01] bg-blue-500/5' : ''}`}>
@@ -131,6 +131,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
                 <Button 
                   onClick={handleGenerate} 
                   loading={loading}
+                  loadingText="Synthesizing..."
                   disabled={!prompt || loading}
                   className="flex-1 shadow-lg shadow-blue-500/10"
                   icon={<Wand2 className="w-5 h-5" />}
@@ -142,10 +143,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
                     variant="secondary"
                     onClick={handleAnalyze} 
                     loading={loading}
+                    loadingText="Analyzing..."
                     disabled={loading}
                     icon={<FileSearch className="w-5 h-5" />}
                   >
-                    Contextual Analysis
+                    Analysis
                   </Button>
                 )}
               </div>

@@ -10,6 +10,9 @@ interface StyleSelectorProps {
   productName: string;
 }
 
+/**
+ * Generates contextually relevant style presets based on the current product.
+ */
 const getPresets = (productName: string) => {
   const p = productName.toLowerCase();
   
@@ -23,19 +26,29 @@ const getPresets = (productName: string) => {
   const productSpecific: string[] = [];
   
   if (p.includes('shirt') || p.includes('hoodie') || p.includes('apparel') || p.includes('tee')) {
-    productSpecific.push('Streetwear Grunge', 'Urban Techwear', 'Editorial High-Fashion', 'Vintage 90s Wash', 'Minimalist Organic');
+    productSpecific.push(
+      'Athleisure Comfort', 
+      'Formal Business Casual', 
+      'Streetwear Grunge', 
+      'Urban Techwear', 
+      'High-Fashion Editorial', 
+      'Vintage 90s Wash', 
+      'Minimalist Organic',
+      'Vintage Sportswear',
+      'Streetwear Lux'
+    );
   }
   else if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
     productSpecific.push('Minimalist Ceramic', 'Cozy Morning Vibe', 'Dark Academia Study', 'Nordic Kitchen', 'Rustic Timber');
   }
-  else if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('tech')) {
-    productSpecific.push('Cyberpunk Neon', 'Matte Black Stealth', 'Holographic Prism', 'Clean Workspace', 'Vaporwave Glitch');
+  else if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('tech') || p.includes('mat')) {
+    productSpecific.push('Cyberpunk Neon', 'Matte Black Stealth', 'Holographic Prism', 'Clean Desktop Setup', 'Vaporwave Glitch');
   }
   else if (p.includes('poster') || p.includes('canvas') || p.includes('print') || p.includes('art')) {
     productSpecific.push('Gallery Exhibition', 'Mid-Century Modern', 'Industrial Loft', 'Risograph Style', 'Museum Lighting');
   }
   else if (p.includes('sticker') || p.includes('pin') || p.includes('button') || p.includes('badge')) {
-    productSpecific.push('Die-Cut Vinyl', 'Pop Art Aesthetic', 'Retro Enamel Badge', 'Holographic Foil', 'Sticker Bomb');
+    productSpecific.push('Die-Cut Vinyl', 'Pop Art Aesthetic', 'Retro Enamel Badge', 'Holographic Foil', 'Street Art Wheatpaste');
   }
   else {
     productSpecific.push('Luxury Branding', 'Macro Material Detail', 'Lifestyle Interior', 'Abstract Geometric', 'Ethereal Glow');
@@ -44,6 +57,9 @@ const getPresets = (productName: string) => {
   return { trending, productSpecific };
 };
 
+/**
+ * Returns professional-grade creative suggestions tailored to the product category.
+ */
 const getProductSuggestions = (productName: string): string[] => {
   const p = productName.toLowerCase();
   
@@ -53,13 +69,16 @@ const getProductSuggestions = (productName: string): string[] => {
     "Hyper-realistic macro photography focusing on premium material grain and intricate details",
   ];
 
-  if (p.includes('shirt') || p.includes('hoodie')) {
+  if (p.includes('shirt') || p.includes('hoodie') || p.includes('apparel') || p.includes('tee')) {
     return [
       ...universalStyles,
+      "Athleisure comfort style with high-performance synthetic textures and a modern yoga studio background",
+      "Formal business casual aesthetic featuring a tailored fit, sharp ironed lines, and a professional workspace lighting",
+      "Vintage sportswear vibes with retro color blocking, authentic fabric wear, and a sun-drenched stadium tunnel setting",
+      "Streetwear lux aesthetic with premium heavy-weight cotton, metallic accents, and a minimal high-end boutique backdrop",
       "Gritty urban techwear aesthetic with rain-slicked concrete and neon blue backlight",
       "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones",
-      "Minimalist high-fashion editorial spread with dramatic shadows and a clean cyclorama wall",
-      "Grunge aesthetic with distressed textures, moody lighting, and underground club vibes"
+      "Minimalist high-fashion editorial spread with dramatic shadows and a clean cyclorama wall"
     ];
   }
 
@@ -106,23 +125,23 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
     <div className="space-y-4">
       <div className="flex gap-2 items-start">
         <div className="flex-1">
-          <Tooltip content="Describe the mood, lighting, or setting for your mockup">
+          <Tooltip content="Enter a custom text description to define the artistic style, lighting, or setting for the AI">
              <div className="w-full">
                 <Input
-                    label="Custom Style Prompt"
+                    label="Visual Direction"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder={`Describe ${productName.toLowerCase()} style...`}
+                    placeholder={`Describe style for ${productName.toLowerCase()}...`}
                     className="h-[42px] bg-slate-900/50"
                 />
              </div>
           </Tooltip>
         </div>
-        <Tooltip content={`Generate a professional creative prompt`} side="left">
+        <Tooltip content="Automatically generate a professional creative prompt optimized for the current product" side="left">
           <button
             onClick={handleSuggest}
             type="button"
-            aria-label="Generate style suggestion"
+            aria-label="Generate intelligent style suggestion"
             className="shrink-0 h-[42px] px-4 mt-[22px] bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm group focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" aria-hidden="true" />
@@ -138,7 +157,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
         </div>
         <div className="flex flex-wrap gap-2" role="list">
           {trending.map((style) => (
-            <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
+            <Tooltip key={style} content={`Quickly apply the trending ${style} aesthetic to your render`} side="bottom">
               <button
                 type="button"
                 onClick={() => onChange(style)}
@@ -159,11 +178,11 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ value, onChange, p
       <div className="space-y-2.5 pt-1">
         <div className="flex items-center gap-2 px-1">
            <Palette className="w-3 h-3 text-indigo-500" aria-hidden="true" />
-           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Thematic Suggestions</span>
+           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contextual for {productName}</span>
         </div>
         <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar" role="list">
           {productSpecific.map((style) => (
-            <Tooltip key={style} content={`Apply ${style} style`} side="bottom">
+            <Tooltip key={style} content={`Apply a style preset specifically curated for ${productName} products`} side="bottom">
               <button
                 type="button"
                 onClick={() => onChange(style)}

@@ -8,7 +8,7 @@ export const getMimeType = (b64: string): string => {
   return match ? match[1] : 'image/png';
 };
 
-export type ExportFormat = 'png' | 'jpg' | 'svg';
+export type ExportFormat = 'png' | 'jpg' | 'webp';
 
 export interface TextOverlayConfig {
   text: string;
@@ -19,6 +19,9 @@ export interface TextOverlayConfig {
   y: number;
   align?: 'left' | 'center' | 'right';
   rotation?: number;
+  skewX?: number;
+  underline?: boolean;
+  strikethrough?: boolean;
   opacity?: number;
   bgEnabled?: boolean;
   bgColor?: string;
@@ -35,7 +38,8 @@ export const saveImage = async (
   filename: string,
   format: ExportFormat,
   scale: number = 1,
-  overlay?: TextOverlayConfig
+  overlay?: TextOverlayConfig,
+  quality: number = 0.95
 ): Promise<void> => {
   try {
     const img = new Image();
@@ -48,7 +52,6 @@ export const saveImage = async (
     });
 
     const canvas = document.createElement('canvas');
-    // EDGE CASE: Max Canvas Size limits (prevent browser crash on extreme scale)
     const maxDimension = 8192;
     const w = Math.min(img.naturalWidth * scale, maxDimension);
     const h = Math.min(img.naturalHeight * scale, maxDimension);
@@ -56,11 +59,18 @@ export const saveImage = async (
     canvas.width = w;
     canvas.height = h;
 
-    const ctx = canvas.getContext('2d', { alpha: format === 'png', desynchronized: true });
+    const ctx = canvas.getContext('2d', { alpha: format !== 'jpg', desynchronized: true });
     if (!ctx) throw new Error("CANVAS_CONTEXT_FAILURE: Failed to acquire 2D context.");
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    
+    // For JPG, fill white background if transparent
+    if (format === 'jpg') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+    }
+    
     ctx.drawImage(img, 0, 0, w, h);
 
     if (overlay && overlay.text.trim()) {
@@ -71,12 +81,15 @@ export const saveImage = async (
       ctx.textAlign = textAlign;
       ctx.textBaseline = 'middle';
 
-      // Clamp coordinates to bounds
       const xPos = Math.max(0, Math.min(100, overlay.x)) / 100 * w;
       const yPos = Math.max(0, Math.min(100, overlay.y)) / 100 * h;
 
       ctx.translate(xPos, yPos);
       if (overlay.rotation) ctx.rotate((overlay.rotation * Math.PI) / 180);
+      if (overlay.skewX) {
+        const skewAngle = (overlay.skewX * Math.PI) / 180;
+        ctx.transform(1, 0, Math.tan(skewAngle), 1, 0, 0);
+      }
       
       const lines = overlay.text.split('\n');
       const lineHeight = fontSize * 1.2;
@@ -105,7 +118,6 @@ export const saveImage = async (
         ctx.globalAlpha = bgOpacity;
         ctx.fillStyle = hex;
         
-        // Rounded Rect Path
         ctx.beginPath();
         ctx.roundRect(bgX, bgY, bgWidth, bgHeight, rounding);
         ctx.fill();
@@ -120,17 +132,44 @@ export const saveImage = async (
       ctx.globalAlpha = (overlay.opacity ?? 100) / 100;
       
       lines.forEach((line, i) => {
-        ctx.fillText(line, 0, (i - (lines.length - 1) / 2) * lineHeight);
+        const lineY = (i - (lines.length - 1) / 2) * lineHeight;
+        ctx.fillText(line, 0, lineY);
+        
+        // Custom decoration drawing as canvas doesn't natively support it in fillText
+        if (overlay.underline || overlay.strikethrough) {
+          const textMetrics = ctx.measureText(line);
+          const textWidth = textMetrics.width;
+          const startX = textAlign === 'center' ? -textWidth / 2 : (textAlign === 'right' ? -textWidth : 0);
+          
+          ctx.beginPath();
+          ctx.strokeStyle = overlay.color;
+          ctx.lineWidth = Math.max(1, fontSize / 15);
+          
+          if (overlay.underline) {
+            const underlineY = lineY + (fontSize / 2.2);
+            ctx.moveTo(startX, underlineY);
+            ctx.lineTo(startX + textWidth, underlineY);
+          }
+          
+          if (overlay.strikethrough) {
+            const strikeY = lineY; // Through the middle
+            ctx.moveTo(startX, strikeY);
+            ctx.lineTo(startX + textWidth, strikeY);
+          }
+          ctx.stroke();
+        }
       });
       ctx.restore();
     }
 
+    const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
+    const dataUrl = canvas.toDataURL(mimeType, quality);
+    
     const downloadLink = document.createElement('a');
     downloadLink.download = `${filename}.${format}`;
-    downloadLink.href = canvas.toDataURL(`image/${format === 'jpg' ? 'jpeg' : format}`, 0.95);
+    downloadLink.href = dataUrl;
     downloadLink.click();
     
-    // Cleanup
     canvas.width = 0;
     canvas.height = 0;
   } catch (error) {

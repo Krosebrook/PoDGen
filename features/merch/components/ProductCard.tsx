@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MerchProduct } from '../types';
 import { ImageOff, CheckCircle2 } from 'lucide-react';
@@ -14,11 +13,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isSelected, o
   const [imgError, setImgError] = useState(false);
 
   return (
-    <Tooltip content={`Select ${product.name}`} className="h-full">
+    <Tooltip content={`Select the ${product.name} model as your primary design target`} className="h-full">
       <button 
         type="button"
         onClick={onClick}
         aria-pressed={isSelected}
+        aria-label={`Select product: ${product.name}. ${product.description}`}
         className={`
           group relative w-full p-3 rounded-xl border cursor-pointer transition-all duration-300 ease-out text-left
           hover:shadow-xl hover:-translate-y-1 hover:border-blue-500/30
@@ -34,7 +34,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isSelected, o
           {!imgError ? (
             <img 
               src={product.placeholderImage} 
-              alt="" // Decorative since name is provided in heading below
+              alt="" // Decorative as the button label provides the context
               onError={() => setImgError(true)}
               className={`w-full h-full object-cover transition-transform duration-500 ${
                 isSelected ? 'scale-105' : 'group-hover:scale-110 opacity-90 group-hover:opacity-100'

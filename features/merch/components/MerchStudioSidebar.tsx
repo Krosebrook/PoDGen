@@ -1,5 +1,4 @@
-
-import React, { Suspense } from 'react';
+import React from 'react';
 import { Settings2, RotateCcw, Layers, Sparkles, Lightbulb } from 'lucide-react';
 import { Tooltip, Button, Alert } from '@/shared/components/ui';
 import { StepSection } from './StepSection';
@@ -36,6 +35,10 @@ interface MerchStudioSidebarProps {
   onReset: () => void;
 }
 
+/**
+ * MerchStudioSidebar Component
+ * Refined to focus on primary and variant mockup generation.
+ */
 export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
   logoImage, bgImage, selectedProduct, stylePreference, textOverlay,
   loading, resultImage, isGeneratingVariations, isUploadingLogo, isUploadingBg,
@@ -44,31 +47,35 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
   onLogoUpload, onBgUpload, onGenerate, onGenerateVariations,
   onClearLogo, onClearBg, onClearError, onReset
 }) => {
-  const isGenerateDisabled = !logoImage || isUploadingLogo || isUploadingBg || loading;
+  const isGenerateDisabled = !logoImage || isUploadingLogo || isUploadingBg || loading || isGeneratingVariations;
 
   return (
-    <aside className="lg:col-span-4 xl:col-span-3 flex flex-col h-full min-h-0 bg-slate-900/50 rounded-[2rem] border border-slate-800/40 overflow-hidden shadow-2xl">
-      <header className="p-6 border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md flex items-center justify-between">
+    <aside 
+      className="flex flex-col h-full bg-slate-900/50 rounded-[2rem] border border-slate-800/40 overflow-hidden shadow-2xl"
+      aria-label="Design Configuration Sidebar"
+    >
+      <header className="p-6 border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
             <Settings2 className="w-4 h-4 text-blue-500" aria-hidden="true" />
           </div>
           <h2 className="font-black text-slate-200 uppercase tracking-[0.2em] text-[10px]">Studio Pipeline</h2>
         </div>
-        <Tooltip content="Reset Studio Session" side="left">
+        <Tooltip content="Clear all current assets, settings, and generated results to start a new design session" side="left">
           <button 
             type="button"
             onClick={onReset}
-            className="p-2 rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-500/5 transition-all group focus:outline-none focus:ring-2 focus:ring-red-500"
-            aria-label="Reset session"
+            className="p-2 rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-500/5 transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Reset design session"
           >
             <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
           </button>
         </Tooltip>
       </header>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <div className="grid grid-cols-1 gap-10 animate-fadeIn">
+      {/* Optimized Content Grid */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="grid grid-cols-1 gap-6 p-6 animate-fadeIn">
           <StepSection number={1} title="Identity Asset">
             <UploadArea 
               image={logoImage} 
@@ -110,12 +117,29 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
           </StepSection>
 
           {activeError && (
-            <div className="space-y-4 pb-4 animate-fadeIn">
-              <Alert message={activeError} onDismiss={onClearError} />
+            <div className="space-y-4 pb-8 animate-fadeIn" role="alert" aria-live="assertive">
+              <div className="group relative">
+                <div className="absolute -inset-0.5 bg-red-500/10 rounded-2xl blur opacity-30"></div>
+                <Alert 
+                  variant="error"
+                  title="Pipeline Diagnostic"
+                  message={activeError} 
+                  onDismiss={onClearError} 
+                />
+              </div>
+              
               {errorSuggestion && (
-                <div className="text-[10px] text-blue-300 bg-blue-500/5 p-5 rounded-2xl border border-blue-500/10 flex gap-4 items-start leading-relaxed shadow-sm" aria-live="polite">
-                  <Lightbulb className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" aria-hidden="true" />
-                  <span className="font-medium">{errorSuggestion}</span>
+                <div className="bg-slate-900 border border-blue-500/20 p-5 rounded-2xl flex gap-4 items-start shadow-xl relative overflow-hidden group/diag">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/40"></div>
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+                    <Lightbulb className="w-4 h-4 text-blue-400" aria-hidden="true" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em]">Actionable Feedback</span>
+                    <p className="text-[10px] text-slate-300 font-medium leading-relaxed">
+                      {errorSuggestion}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -123,33 +147,34 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
         </div>
       </div>
       
-      <footer className="p-6 bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800 shadow-[0_-15px_30px_rgba(0,0,0,0.4)]">
-        <div className={`grid gap-4 ${resultImage && !loading ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <Tooltip content="Synthesize brand mockup using AI" side="top" className="w-full">
+      <footer className="p-6 bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800 shadow-[0_-15px_30px_rgba(0,0,0,0.4)] shrink-0">
+        <div className="grid grid-cols-2 gap-4">
+          <Tooltip content="Synthesize your assets into a professional high-fidelity master mockup render" side="top" className="w-full">
             <Button 
               onClick={onGenerate} 
               loading={loading}
               disabled={isGenerateDisabled}
               icon={<Layers className="w-5 h-5" />}
-              className="w-full h-14 rounded-2xl shadow-xl shadow-blue-600/10 text-[10px] tracking-widest uppercase font-black"
+              className="w-full h-14 rounded-2xl shadow-xl shadow-blue-600/10 text-[9px] tracking-widest uppercase font-black"
+              aria-label={resultImage ? "Re-render primary mockup" : "Generate master mockup"}
             >
-              {resultImage ? 'Re-Render' : 'Render Pipeline'}
+              {resultImage ? 'Update Master' : 'Generate Mockup'}
             </Button>
           </Tooltip>
 
-          {resultImage && !loading && (
-             <Tooltip content="Generate 3 alternative angles and lighting styles" side="top" className="w-full">
-               <Button 
-                  variant="indigo"
-                  onClick={onGenerateVariations}
-                  loading={isGeneratingVariations}
-                  icon={<Sparkles className="w-4 h-4" />}
-                  className="w-full h-14 rounded-2xl shadow-xl shadow-indigo-600/10 text-[10px] tracking-widest uppercase font-black"
-               >
-                 Variations
-               </Button>
-             </Tooltip>
-          )}
+          <Tooltip content="Generate 3 alternative mockups with slightly different lighting and camera angles based on your design" side="top" className="w-full">
+             <Button 
+                variant="indigo"
+                onClick={onGenerateVariations}
+                loading={isGeneratingVariations}
+                disabled={!logoImage || loading}
+                icon={<Sparkles className="w-4 h-4" />}
+                className="w-full h-14 rounded-2xl shadow-xl shadow-indigo-600/10 text-[9px] tracking-widest uppercase font-black"
+                aria-label="Generate alternative takes"
+             >
+               Variations
+             </Button>
+          </Tooltip>
         </div>
       </footer>
     </aside>

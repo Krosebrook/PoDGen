@@ -1,15 +1,22 @@
-
 import React, { useRef, useState } from 'react';
 import { Upload, RefreshCw } from 'lucide-react';
+import { Spinner } from '@/shared/components/ui/Spinner';
 
 interface ImageDropzoneProps {
   selectedImage: string | null;
   onFileSelect: (file: File) => void;
   onReset: () => void;
   error?: string | null;
+  loading?: boolean;
 }
 
-export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onFileSelect, onReset, error }) => {
+export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ 
+  selectedImage, 
+  onFileSelect, 
+  onReset, 
+  error,
+  loading = false
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +36,6 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
     e.preventDefault();
     e.stopPropagation();
     
-    // Prevent flickering when dragging over child elements
     if (e.currentTarget.contains(e.relatedTarget as Node)) {
       return;
     }
@@ -47,24 +53,34 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
 
   return (
     <div 
-      className={`flex-1 border-dashed rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-300 ease-out cursor-pointer
+      className={`flex-1 border-dashed rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-300 ease-out cursor-pointer min-h-[200px]
         ${isDragging 
           ? 'border-4 border-blue-500 bg-blue-500/20 scale-[1.01] shadow-2xl shadow-blue-500/20' 
           : error 
             ? 'border-2 border-red-500/50 bg-slate-800/50' 
             : 'border-2 border-slate-700 bg-slate-800/50 hover:border-blue-500 hover:bg-slate-800'
-        }`}
-      onClick={() => fileInputRef.current?.click()}
+        } ${loading ? 'pointer-events-none' : ''}`}
+      onClick={() => !loading && fileInputRef.current?.click()}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-20 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fadeIn">
+          <div className="bg-slate-800 p-4 rounded-2xl shadow-2xl border border-slate-700 flex flex-col items-center gap-3">
+            <Spinner className="w-8 h-8 text-blue-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Processing Asset</span>
+          </div>
+        </div>
+      )}
+
       {selectedImage ? (
         <img 
           src={selectedImage} 
           alt="Original" 
-          className="max-h-full max-w-full object-contain p-4 pointer-events-none select-none"
+          className={`max-h-full max-w-full object-contain p-4 pointer-events-none select-none transition-opacity duration-300 ${loading ? 'opacity-30 blur-sm' : 'opacity-100'}`}
         />
       ) : (
         <div className="text-center p-6 pointer-events-none select-none">
@@ -89,7 +105,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ selectedImage, onF
         className="hidden" 
         accept="image/*"
       />
-      {selectedImage && (
+      {selectedImage && !loading && (
         <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2 hover:bg-black/80 transition z-10" onClick={(e) => { e.stopPropagation(); onReset(); }}>
            <RefreshCw className="w-4 h-4 text-white" />
         </div>

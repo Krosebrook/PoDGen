@@ -203,7 +203,7 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     name: 'Denim Apron',
     description: 'Workshop/Barista style',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Apron',
-    defaultPrompt: 'A {style_preference} studio shot of a durable denim workshop apron hanging on a wall hook, with this logo embroidered on the chest pocket area.'
+    defaultPrompt: 'A {style_preference} studio shot of a durable denim workshop apron hanging on a wall hook, with this logo embroidered on the check pocket area.'
   },
   {
     id: 'coaster-set',
@@ -211,5 +211,12 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Ceramic drink coasters',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Coasters',
     defaultPrompt: 'A {style_preference} lifestyle shot of a set of circular ceramic drink coasters on a marble coffee table, with this logo printed on the surface.'
+  },
+  {
+    id: 'poster-basic',
+    name: 'Premium Poster',
+    description: 'High-quality matte paper print',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
+    defaultPrompt: 'A {style_preference} studio shot of a high-quality matte paper poster lying flat on a minimalist grey surface, showcasing this logo as a sharp, high-contrast graphic print.'
   }
 ];
