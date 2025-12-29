@@ -1,10 +1,10 @@
 # Architecture & Design Patterns
 
-NanoGen Studio represents a significant shift towards **AI-First UX**. This document outlines the core architectural pillars that ensure the application remains performant, secure, and extensible.
+NanoGen Studio is an **AI-First UX** application designed for speed, high-fidelity synthesis, and professional-grade product visualization.
 
-## 1. Domain-Driven Module Structure
+## 1. Feature-Driven Structure
 
-The project utilizes a **Feature-Based Architecture**. Logic, components, and hooks are grouped by domain to prevent "spaghetti" dependencies.
+The codebase is organized into domain-specific modules to maximize maintainability and reduce cross-feature leakage.
 
 ```
 src/
@@ -12,46 +12,42 @@ src/
 │   ├── editor/             # Image manipulation & analysis
 │   ├── merch/              # Product mockup synthesis
 │   └── integrations/       # External connectivity tools
-├── shared/                 # Universal primitives
-│   ├── components/ui/      # Atomic UI Library (Design System)
-│   ├── hooks/              # Global state & side-effect managers
-│   └── utils/              # Pure utility functions (Canvas, Image, File)
-└── services/               # Core Infrastructure
-    ├── ai-core.ts          # Central Gemini API Facade (SDK Compliance)
-    └── logger.ts           # Unified telemetry & logging
+├── shared/                 # Core cross-feature primitives
+│   ├── components/ui/      # Atomic Design System
+│   ├── hooks/              # Global state & effects
+│   └── utils/              # Pure functions (Canvas, File, Image)
+└── services/               # Infrastructure Layer
+    └── ai-core.ts          # Central Gemini API Service (SDK v1.30+)
 ```
 
-## 2. AI Core Service (`AICoreService`)
+## 2. Layout Strategy: CSS Grid & Clamping
 
-The `AICoreService` encapsulates the complexities of the Gemini API into a predictable, robust interface.
+We utilize **CSS Grid** as the primary layout engine to handle complex, multi-pane workspaces.
 
-### SDK Compliance:
-- **Fresh Context**: A new `GoogleGenAI` client is initialized per-request to ensure the latest environment-injected API keys are always utilized.
-- **Thinking Budget**: Automated coordination between `thinkingBudget` and `maxOutputTokens` to prevent empty responses during complex reasoning tasks.
-- **Exponential Backoff**: Robust retry logic with jitter to handle transient `429` and `503` status codes.
+- **Deterministic Widths**: The Merch Studio sidebar uses a `clamp(340px, 30%, 420px)` configuration. This ensures that on large screens it doesn't become too wide (preserving information density) and on smaller desktops it doesn't become unusable.
+- **Fluid Viewports**: The primary preview area occupies `1fr`, allowing it to expand and contract gracefully with the browser window, maximizing the visual area for mockup inspection.
+- **Responsive Ordering**: Using CSS `order`, we prioritize the visual viewport on mobile devices (Top) while keeping it in the primary content flow for screen readers.
 
-## 3. Product Visualization Roadmap
+## 3. UI/UX Best Practices for AI
 
-While currently focused on high-fidelity 2D synthesis, the architecture is designed for future immersive expansion.
+Generating AI content is asynchronous and prone to safety blocks. Our UX addresses this via:
 
-### Immersive Expansion Plan:
-- **Veo 3.1 Integration**: Transition from static mockups to 5-second cinematic product reveal videos.
-- **Interactive 3D Simulation**: Re-integration of a PBR-based 3D renderer (GLB/Three.js) for physical interaction testing.
-- **AR Viewport**: Web-based Augmented Reality (WebXR) for "testing" merch items in the user's physical space.
+- **Actionable Feedback**: Errors from the Gemini API are sanitized and mapped to "Diagnostics" with specific user actions (e.g., "Simplify your prompt" or "Check logo resolution").
+- **Visual Synthesis Skeletons**: High-fidelity loading states that describe exactly what the AI is doing ("Synthesizing Masterpiece...", "Exploring Variations...").
+- **Non-Blocking Asset Ingestion**: Logo and background uploads are handled in separate threads with concurrent UI updates to ensure the interface never feels "locked".
 
-## 4. Canvas Synthesis Engine (`saveImage`)
+## 4. AI Service Implementation
 
-When a user exports a "Master" file, the application uses a high-precision `2D Canvas` engine.
+The `AICoreService` is a robust facade for the `@google/genai` SDK:
 
-- **Multi-Layer Composition**: Blends the AI-generated base, the dynamic typography layer, and legibility masks into a single raster.
-- **Resolution Scaling**: Supports up-sampling during export to ensure crisp prints (up to 8K virtual resolution).
-- **Coordinate Clamping**: Ensures text overlays stay within valid UV boundaries during drag manipulation.
+- **Stateless Client Initialization**: Fresh `GoogleGenAI` instances are created per-call to ensure dynamic environment keys (from `process.env.API_KEY`) are respected without stale closures.
+- **Token Budget Coordination**: Automatically manages `thinkingBudget` and `maxOutputTokens` to prevent truncated or empty responses during deep reasoning.
+- **Resilient Retry Logic**: Implements exponential backoff with jitter for transient 429/503 errors.
 
-## 5. Security Model
+## 5. Security & Privacy
 
-- **Key Sovereignty**: All requests use `process.env.API_KEY` or trigger the `aistudio.openSelectKey()` dialog for Pro models.
-- **Client-Side Sanitization**: Base64 cleaning and strict MIME validation happen at the entry point.
-- **Abort Signaling**: Active AI requests are cancelled via `AbortController` if the user switches context, saving bandwidth and tokens.
+- **Local-First Keys**: Platform credentials for Shopify, Etsy, etc., are stored exclusively in the user's `localStorage` and never persist on any server.
+- **Prompt Sanitization**: Base64 data is cleaned and validated before being passed to the Generative model.
 
 ---
 

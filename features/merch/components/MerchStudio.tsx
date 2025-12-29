@@ -8,11 +8,16 @@ interface MerchStudioProps {
 }
 
 /**
- * MerchStudio Root Component
+ * MerchStudio: High-performance design workspace.
  * 
- * Implements a modern dual-pane workspace using CSS Grid.
- * Sidebar: Flexible width via clamp(340px, 30%, 420px) to ensure usability across display densities.
- * Viewport: Fluid 1fr distribution for maximum visual area.
+ * Layout Implementation:
+ * - Employs CSS Grid for the top-level dual-pane workspace.
+ * - Sidebar: Constrained via clamp(340px, 30%, 420px) to prevent layout break on ultra-wide or small screens.
+ * - Viewport: Fluid 1fr distribution to maximize visual canvas area.
+ * 
+ * UX Design:
+ * - Responsive ordering: Viewport leads on mobile (order-1) for immediate visual feedback.
+ * - Semantic landmarks: Uses aside/main/section for superior screen reader navigation.
  */
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
   const {
@@ -33,13 +38,12 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
       aria-label="Merch Design Workspace"
     >
       {/* 
-        Design Control Column (Sidebar) 
-        On mobile, this appears below the preview (order-2) to prioritize visual feedback.
-        On desktop, it is the primary controller (order-1).
+        Side Navigation & Controls (Configuration Column)
+        Order-2 on mobile ensures the interactive preview stays top-of-mind.
       */}
-      <section 
+      <aside 
         className="h-full min-h-0 overflow-hidden flex flex-col order-2 lg:order-1"
-        aria-label="Design Controls"
+        aria-label="Design Configuration Panel"
       >
         <MerchStudioSidebar 
           logoImage={logoImage}
@@ -54,7 +58,6 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
           isUploadingBg={isUploadingBg}
           activeError={activeError}
           errorSuggestion={errorSuggestion}
-          // Fix: Use correctly destructured setter names from useMerchController
           onSelectProduct={setSelectedProduct}
           onStyleChange={setStylePreference}
           onTextOverlayChange={setTextOverlay}
@@ -71,15 +74,15 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
             clearActiveError();
           }}
         />
-      </section>
+      </aside>
 
       {/* 
-        Main Preview Column (Viewport) 
-        Prioritized on mobile devices (order-1).
+        Main Viewport & Preview (Primary Visual Column)
+        Order-1 on mobile for immediate visual impact when clicking "Generate".
       */}
       <section 
         className="h-full min-h-0 overflow-hidden flex flex-col order-1 lg:order-2"
-        aria-label="Interactive Preview Viewport"
+        aria-label="Product Preview Viewport"
       >
         <MerchStudioViewport 
           logoImage={logoImage}
