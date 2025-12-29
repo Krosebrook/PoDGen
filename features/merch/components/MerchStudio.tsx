@@ -9,9 +9,7 @@ interface MerchStudioProps {
 
 /**
  * MerchStudio Root Component
- * Refactored to use an explicit CSS Grid for structural stability.
- * Sidebar: Flexible width constrained between 340px and 420px via clamp.
- * Viewport: Fills 1fr (remaining space).
+ * Orchestrates the design sidebar and high-precision viewport.
  */
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
   const {
@@ -27,7 +25,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
   return (
     <div 
-      className="grid grid-cols-1 lg:grid-cols-[clamp(340px,30%,420px)_1fr] gap-8 xl:gap-12 h-full lg:h-[calc(100vh-180px)] min-h-0 w-full"
+      className="grid grid-cols-1 lg:grid-cols-[clamp(340px,30%,420px)_1fr] gap-8 xl:gap-12 h-full lg:h-[calc(100vh-180px)] min-h-0 w-full animate-fadeIn"
       role="region"
       aria-label="Merch Design Studio"
     >

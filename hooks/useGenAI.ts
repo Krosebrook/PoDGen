@@ -1,6 +1,6 @@
-
 import { useState, useCallback } from 'react';
-import { generateOrEditImage } from '../services/gemini';
+// Correcting the import to use the exported geminiService instance from services/gemini
+import { geminiService } from '../services/gemini';
 import { AppError } from '../shared/utils/errors';
 
 interface UseGenAIResult {
@@ -36,8 +36,14 @@ export const useGenAI = (): UseGenAIResult => {
     setResultImage(null);
 
     try {
-      const result = await generateOrEditImage(imageBase64, prompt, additionalImages);
-      setResultImage(result);
+      // Fix: Call geminiService.request with required arguments. 
+      // We pass the prompt first, then an array containing the source image and any additions.
+      const result = await geminiService.request(prompt, [imageBase64, ...additionalImages], {
+        model: 'gemini-2.5-flash-image'
+      });
+      
+      // Update the result image state with the synthesized image from the AI response
+      setResultImage(result.image || null);
       return true;
     } catch (err: any) {
       console.error("GenAI Hook caught error:", err);
