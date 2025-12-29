@@ -61,7 +61,7 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
           </div>
           <h2 className="font-black text-slate-200 uppercase tracking-[0.2em] text-[10px]">Studio Pipeline</h2>
         </div>
-        <Tooltip content="Clear all current assets, settings, and generated results to start a new design session" side="left">
+        <Tooltip content="Reset all current assets, configuration, and generated results to start a completely new design session" side="left">
           <button 
             type="button"
             onClick={onReset}
@@ -121,17 +121,19 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed px-1">
                  Synthesize 3 additional mockup variations with slightly modified camera angles and studio lighting setups.
                </p>
-               <Button 
-                  variant="outline"
-                  onClick={onGenerateVariations}
-                  loading={isGeneratingVariations}
-                  disabled={!resultImage || loading}
-                  icon={<Grid className="w-4 h-4" />}
-                  className="w-full h-12 rounded-xl text-[9px] tracking-widest uppercase font-black border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/5"
-                  aria-label="Generate alternate takes"
-               >
-                 Explore Variations
-               </Button>
+               <Tooltip content="Explore alternative perspectives and lighting setups for your current design" side="top">
+                 <Button 
+                    variant="outline"
+                    onClick={onGenerateVariations}
+                    loading={isGeneratingVariations}
+                    disabled={!resultImage || loading}
+                    icon={<Grid className="w-4 h-4" />}
+                    className="w-full h-12 rounded-xl text-[9px] tracking-widest uppercase font-black border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/5"
+                    aria-label="Generate alternate takes"
+                 >
+                   Explore Variations
+                 </Button>
+               </Tooltip>
              </div>
           </StepSection>
 
@@ -168,7 +170,7 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
       
       <footer className="p-6 bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800 shadow-[0_-15px_30px_rgba(0,0,0,0.4)] shrink-0">
         <div className="grid grid-cols-2 gap-4">
-          <Tooltip content="Synthesize your assets into a professional high-fidelity master mockup render" side="top" className="w-full">
+          <Tooltip content="Synthesize your logo and configuration into a professional high-fidelity master mockup render" side="top" className="w-full">
             <Button 
               onClick={onGenerate} 
               loading={loading}

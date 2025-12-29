@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Spinner, Button, Tooltip, Badge } from '@/shared/components/ui';
-import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, CheckCircle2, FileDown } from 'lucide-react';
+import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, CheckCircle2, FileDown, Box, Image as ImageIcon } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
 import { TextOverlayState } from '../hooks/useMerchState';
+import { Merch3DViewer } from './Merch3DViewer';
 
 interface MerchPreviewProps {
+  logoImage: string | null;
   loading: boolean;
   resultImage: string | null;
   variations: string[];
@@ -20,7 +22,10 @@ interface MerchPreviewProps {
   onTextOverlayChange?: (overlay: TextOverlayState) => void;
 }
 
+type ViewMode = '2D' | '3D';
+
 export const MerchPreview: React.FC<MerchPreviewProps> = ({
+  logoImage,
   loading,
   resultImage,
   variations,
@@ -34,6 +39,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   textOverlay,
   onTextOverlayChange
 }) => {
+  const [viewMode, setViewMode] = useState<ViewMode>('2D');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [jpgQuality, setJpgQuality] = useState(90);
   const [isExporting, setIsExporting] = useState(false);
@@ -69,7 +75,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
       for (let i = 0; i < variations.length; i++) {
         setExportProgress({ current: i + 1, total: variations.length });
         await saveImage(variations[i], `variation-${i+1}-${productId}`, exportFormat, 2, textOverlay, jpgQuality / 100);
-        // Small delay to prevent browser download queue issues
         await new Promise(r => setTimeout(r, 400));
       }
     } finally {
@@ -159,18 +164,38 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   return (
     <div className="flex flex-col h-full gap-8 p-1">
       <div className="bg-[#05070a] rounded-[3rem] border border-slate-800 p-0.5 relative overflow-hidden flex flex-col flex-1 shadow-inner group/preview">
-        <div className="absolute top-8 left-8 z-20 flex flex-wrap items-center gap-3">
-          <Badge variant="blue" icon={<Zap className="w-3 h-3" />}>RENDER: {productName}</Badge>
-          {stylePreference && <Badge variant="indigo">STYLE: {stylePreference}</Badge>}
-          {exportProgress && (
-            <Badge variant="success" icon={<FileDown className="w-3 h-3 animate-bounce" />}>
-              EXPORTING: {exportProgress.current}/{exportProgress.total}
-            </Badge>
-          )}
+        {/* Top Control Bar */}
+        <div className="absolute top-8 left-8 right-8 z-20 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Badge variant="blue" icon={<Zap className="w-3 h-3" />}>RENDER: {productName}</Badge>
+            {stylePreference && <Badge variant="indigo">STYLE: {stylePreference}</Badge>}
+            {exportProgress && (
+              <Badge variant="success" icon={<FileDown className="w-3 h-3 animate-bounce" />}>
+                EXPORTING: {exportProgress.current}/{exportProgress.total}
+              </Badge>
+            )}
+          </div>
+          
+          <div className="flex bg-slate-900/80 backdrop-blur-md p-1 rounded-2xl border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setViewMode('2D')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === '2D' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" /> AI Render
+            </button>
+            <button 
+              onClick={() => setViewMode('3D')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === '3D' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Box className="w-3.5 h-3.5" /> 3D Simulator
+            </button>
+          </div>
         </div>
 
         <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden group/canvas">
-          {loading ? (
+          {viewMode === '3D' && logoImage ? (
+            <Merch3DViewer logo={logoImage} productName={productName} />
+          ) : loading ? (
             <div className="flex flex-col items-center gap-6 animate-fadeIn" aria-live="polite">
               <Spinner className="w-12 h-12 text-blue-500" />
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Rendering Master...</p>
@@ -218,23 +243,24 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
           )}
         </div>
 
-        {activeImage && (
+        {activeImage && viewMode === '2D' && (
           <div className="p-8 bg-slate-900/50 backdrop-blur-2xl border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-4 bg-slate-800/50 p-2 rounded-2xl border border-slate-700">
               <div className="flex gap-1 p-1 bg-slate-900 rounded-xl">
                 {(['png', 'jpg', 'webp'] as ExportFormat[]).map(fmt => (
-                  <button
-                    key={fmt}
-                    onClick={() => setExportFormat(fmt)}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportFormat === fmt ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                    {fmt}
-                  </button>
+                  <Tooltip key={fmt} content={`Export result in ${fmt.toUpperCase()} format ${fmt === 'png' ? '(lossless, supports transparency)' : '(compressed, optimized for web)'}`}>
+                    <button
+                      onClick={() => setExportFormat(fmt)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${exportFormat === fmt ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      {fmt}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
               {exportFormat !== 'png' && (
                 <div className="flex items-center gap-3 px-2 border-l border-slate-700">
-                  <Tooltip content="Adjust export quality vs file size balance">
+                  <Tooltip content="Adjust export quality vs file size balance. Lower values result in smaller files but visible artifacts.">
                     <div className="flex items-center gap-2">
                       <Sliders className="w-3.5 h-3.5 text-slate-500" />
                       <input 
@@ -250,7 +276,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <Tooltip content="Generate alternative mockup variations with different lighting and angles" side="top">
+              <Tooltip content="Generate alternative mockup variations with different lighting and angles based on your design" side="top">
                 <Button variant="outline" onClick={onGenerateVariations} loading={isGeneratingVariations} icon={<Sparkles className="w-4 h-4" />}>Variations</Button>
               </Tooltip>
               {variations.length > 0 && (
@@ -258,7 +284,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
                   <Button variant="secondary" onClick={handleExportAllVariations} loading={isExporting && !!exportProgress} icon={<Layers className="w-4 h-4" />}>Export All</Button>
                 </Tooltip>
               )}
-              <Tooltip content="Download current master mockup at high resolution" side="top">
+              <Tooltip content="Download current master mockup at high resolution (2x upscale)" side="top">
                 <Button onClick={() => handleExport(activeImage)} loading={isExporting && !exportProgress} icon={<Download className="w-4 h-4" />}>Export</Button>
               </Tooltip>
             </div>
@@ -266,7 +292,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
         )}
       </div>
 
-      {/* Variation Section Integration */}
       <MerchVariations 
         variations={variations} 
         isGenerating={isGeneratingVariations} 

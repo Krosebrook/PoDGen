@@ -1,7 +1,7 @@
-
 import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
-import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError, ValidationError } from '../shared/utils/errors';
+import { AppError, RateLimitError, SafetyError, ApiError, AuthenticationError, ValidationError, ErrorCode } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
+import { logger } from '../shared/utils/logger';
 
 interface RequestOptions {
   signal?: AbortSignal;
@@ -23,14 +23,18 @@ type ModelPart = ImagePart | TextPart;
 
 const SUPPORTED_INPUT_MIMES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/heic'];
 
+/**
+ * GeminiService: Orchestrates communication with Google Generative AI models.
+ * Implements sophisticated error handling, transient fault recovery, and 
+ * strict asset validation for high-precision image synthesis.
+ */
 class GeminiService {
   private static instance: GeminiService;
-  private client: GoogleGenAI | null = null;
   
   // Configuration constants
   private readonly MODEL_NAME = "gemini-2.5-flash-image";
   private readonly MAX_RETRIES = 3;
-  private readonly BASE_DELAY_MS = 1000;
+  private readonly BASE_DELAY_MS = 1500;
   private readonly DEFAULT_TIMEOUT_MS = 60000;
 
   private constructor() {}
@@ -43,133 +47,122 @@ class GeminiService {
   }
 
   /**
-   * Lazy initialization of the GenAI client.
-   * Throws AuthenticationError if API key is missing.
+   * Instantiates the GenAI client using the required naming parameter pattern.
+   * Note: The SDK does not support late-binding of keys effectively, so we 
+   * instantiate per request or verify validity here.
    */
-  private getClient(): GoogleGenAI {
-    if (!this.client) {
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        throw new AuthenticationError("API Key is missing. Please ensure process.env.API_KEY is available.");
-      }
-      this.client = new GoogleGenAI({ apiKey });
+  private createClient(): GoogleGenAI {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new AuthenticationError("API Configuration missing: process.env.API_KEY is undefined. Ensure the environment is correctly provisioned for the requested model tier.");
     }
-    return this.client;
+    return new GoogleGenAI({ apiKey });
   }
 
   /**
-   * Maps unknown errors to typed AppError instances.
+   * Maps raw API exceptions to granular, user-facing AppError subclasses.
+   * This ensures the UI can provide actionable feedback (e.g., retrying vs fixing prompt).
    */
-  private static mapError(error: unknown): AppError {
+  private static mapError(error: any): AppError {
     if (error instanceof AppError) return error;
 
-    const msg = error instanceof Error ? error.message : String(error);
-    const status = (error as any)?.status || (error as any)?.response?.status;
-    const lowerMsg = msg.toLowerCase();
+    const message = error?.message || String(error);
+    const status = error?.status || error?.response?.status;
+    const lowerMsg = message.toLowerCase();
 
-    if (error instanceof Error && (error.name === 'AbortError' || msg.includes('aborted'))) {
-      return new ApiError("Request cancelled by user.", 499);
+    // 1. Connectivity / Lifecycle Errors
+    if (error instanceof Error && (error.name === 'AbortError' || lowerMsg.includes('aborted'))) {
+      return new ApiError("The request was cancelled before completion. Suggestion: Avoid switching tabs or closing the editor during active synthesis.", 499);
+    }
+    if (lowerMsg.includes('timeout') || lowerMsg.includes('timed out')) {
+      return new ApiError("The AI gateway timed out waiting for a response. Suggestion: Your assets might be too complex for the current regional latency. Try again in a few moments.", 504);
     }
 
-    if (status === 429 || msg.includes("429")) {
+    // 2. Authentication & Authorization (401, 403)
+    if (status === 401 || status === 403 || lowerMsg.includes("api key") || lowerMsg.includes("unauthorized") || lowerMsg.includes("forbidden")) {
+      return new AuthenticationError("Security handshake failed. Suggestion: Your API key may have expired or lacks permissions for the 2.5/3.0 model series. Check your Google AI Studio project status.");
+    }
+
+    // 3. Resource & Rate Limits (429)
+    if (status === 429 || lowerMsg.includes("quota") || lowerMsg.includes("rate limit") || lowerMsg.includes("too many requests")) {
       return new RateLimitError();
     }
-    
-    if (status === 401 || status === 403 || lowerMsg.includes("api key") || lowerMsg.includes("authentication")) {
-      return new AuthenticationError("Access denied. Please check your API key configuration and project permissions.");
-    }
 
-    if (status === 503 || lowerMsg.includes("503") || lowerMsg.includes("overloaded") || lowerMsg.includes("capacity")) {
-      return new ApiError("The AI model is currently at maximum capacity. Please wait a moment before retrying.", 503);
-    }
-
+    // 4. Safety & Content Policies
     if (
       lowerMsg.includes("safety") || 
       lowerMsg.includes("blocked") || 
+      lowerMsg.includes("finishreason: safety") ||
       lowerMsg.includes("policy") ||
       lowerMsg.includes("restricted")
     ) {
-      return new SafetyError("The request was blocked by Gemini safety filters. This often happens with human faces or sensitive branding. Try simplifying your prompt.");
+      return new SafetyError("The generation was interrupted by the AI safety layer. Suggestion: This often happens with human figures or sensitive brand elements. Try a more abstract prompt or a different brand asset.");
     }
 
-    if (status === 400 || lowerMsg.includes("400") || lowerMsg.includes("invalid") || lowerMsg.includes("format")) {
-      return new ApiError(`Invalid request: ${msg}. Verify image formats and prompt complexity.`, 400);
+    // 5. Client-Side Validation (400)
+    if (status === 400 || lowerMsg.includes("invalid") || lowerMsg.includes("unsupported")) {
+      return new ValidationError(`The request payload is invalid. Suggestion: Verify your image is within 256px - 4096px and is in a standard web format like PNG or JPG.`);
     }
 
-    return new ApiError(msg, status || 500);
+    // 6. Server-Side / Capacity Errors (500, 503)
+    if (status === 503 || lowerMsg.includes("overloaded") || lowerMsg.includes("capacity") || lowerMsg.includes("service unavailable")) {
+      return new ApiError("AI Engine Overload: The regional processing cluster is at capacity. Suggestion: We are queueing requests; please wait 15 seconds before retrying.", 503);
+    }
+
+    // Default Fallback
+    return new ApiError(`Synthesis failure: ${message}. Suggestion: Refresh the application if the issue persists across different assets.`, status || 500);
   }
 
   /**
-   * Executes a function with exponential backoff retry logic.
+   * Implementation of exponential backoff with jitter for transient network or capacity failures.
    */
   private async withRetry<T>(fn: () => Promise<T>, retries = this.MAX_RETRIES, delay = this.BASE_DELAY_MS): Promise<T> {
     try {
       return await fn();
-    } catch (error: unknown) {
+    } catch (error: any) {
       const mappedError = GeminiService.mapError(error);
       
-      // Non-retriable errors
-      if (
-        mappedError instanceof AuthenticationError ||
-        mappedError instanceof SafetyError || 
-        mappedError instanceof ValidationError ||
-        (mappedError instanceof ApiError && mappedError.statusCode === 499) ||
-        (mappedError instanceof ApiError && mappedError.statusCode === 400)
-      ) {
-        throw mappedError;
-      }
+      // Do not retry on non-transient or definitive errors
+      const isTransient = (
+        mappedError instanceof RateLimitError || 
+        (mappedError instanceof ApiError && (mappedError.statusCode === 503 || mappedError.statusCode === 504)) ||
+        mappedError.message.includes('overloaded')
+      );
 
-      // Retry on Rate Limit (429) or Service Unavailable (503)
-      if (retries > 0 && (mappedError instanceof RateLimitError || (mappedError instanceof ApiError && mappedError.statusCode === 503))) {
-        // Add jitter to delay
-        const jitter = Math.random() * 200;
-        await new Promise(resolve => setTimeout(resolve, delay + jitter));
-        return this.withRetry(fn, retries - 1, delay * 2);
+      if (retries > 0 && isTransient) {
+        const jitter = Math.random() * 500;
+        const nextDelay = delay * 2 + jitter;
+        logger.warn(`Gemini Gateway: Transient error detected. Retrying attempt ${this.MAX_RETRIES - retries + 1}/${this.MAX_RETRIES}. Next try in ${Math.round(nextDelay)}ms.`);
+        await new Promise(resolve => setTimeout(resolve, nextDelay));
+        return this.withRetry(fn, retries - 1, nextDelay);
       }
       
       throw mappedError;
     }
   }
 
-  private validateImageFormat(b64: string) {
+  /**
+   * Pre-flight validation for uploaded images.
+   */
+  private validateImage(b64: string, label: string) {
+    if (!b64 || typeof b64 !== 'string' || !b64.startsWith('data:image/')) {
+      throw new ValidationError(`Invalid ${label} data. Suggestion: Ensure the file is a valid image and correctly read into memory.`);
+    }
+
     const mime = getMimeType(b64);
     if (!SUPPORTED_INPUT_MIMES.includes(mime)) {
-      throw new ValidationError(`Unsupported image format: ${mime}. Gemini currently supports: ${SUPPORTED_INPUT_MIMES.join(', ')}.`);
+      throw new ValidationError(`Unsupported format for ${label}: ${mime.split('/')[1].toUpperCase()}. Suggestion: Use PNG for logos (supports transparency) or high-quality JPG for backgrounds.`);
+    }
+
+    // Check for obviously truncated base64
+    if (b64.length < 100) {
+      throw new ValidationError(`The ${label} asset appears to be corrupted or too small. Suggestion: Re-upload the file.`);
     }
   }
 
   /**
-   * Constructs the payload parts for the API request.
+   * Main entry point for image generation and contextual editing.
    */
-  private buildParts(mainImageBase64: string, prompt: string, additionalImagesBase64: string[]): ModelPart[] {
-    const parts: ModelPart[] = [];
-
-    // 1. Main Image
-    this.validateImageFormat(mainImageBase64);
-    parts.push({
-      inlineData: {
-        data: cleanBase64(mainImageBase64),
-        mimeType: getMimeType(mainImageBase64),
-      },
-    });
-
-    // 2. Additional Images
-    additionalImagesBase64.forEach((img) => {
-      this.validateImageFormat(img);
-      parts.push({
-        inlineData: {
-          data: cleanBase64(img),
-          mimeType: getMimeType(img),
-        },
-      });
-    });
-
-    // 3. Text Prompt
-    parts.push({ text: prompt });
-
-    return parts;
-  }
-
   public async generateOrEditImage(
     mainImageBase64: string,
     prompt: string,
@@ -178,59 +171,79 @@ class GeminiService {
   ): Promise<string> {
     const { signal, timeout = this.DEFAULT_TIMEOUT_MS } = options;
 
+    // 1. Upfront Validation
+    this.validateImage(mainImageBase64, "primary asset");
+    additionalImagesBase64.forEach((img, i) => this.validateImage(img, `context asset ${i + 1}`));
+
     return this.withRetry(async () => {
-      if (signal?.aborted) {
-        throw new Error("Request aborted");
-      }
+      if (signal?.aborted) throw new Error("Request aborted");
 
-      const ai = this.getClient();
-      const parts = this.buildParts(mainImageBase64, prompt, additionalImagesBase64);
+      const ai = this.createClient();
+      
+      const parts: Part[] = [];
+      // Primary image
+      parts.push({
+        inlineData: {
+          data: cleanBase64(mainImageBase64),
+          mimeType: getMimeType(mainImageBase64),
+        },
+      });
+      // Contextual images
+      additionalImagesBase64.forEach((img) => {
+        parts.push({
+          inlineData: {
+            data: cleanBase64(img),
+            mimeType: getMimeType(img),
+          },
+        });
+      });
+      // Instruction
+      parts.push({ text: prompt });
 
+      // Race against timeout
       const generatePromise = ai.models.generateContent({
         model: this.MODEL_NAME,
-        contents: { parts: parts as Part[] }, // Cast strictly compliant Part
+        contents: { parts },
       });
 
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("Request timed out")), timeout)
+        setTimeout(() => reject(new Error("Request timed out during synthesis")), timeout)
       );
-
-      // Handle AbortSignal race
-      const abortPromise = new Promise<never>((_, reject) => {
-        if (signal) {
-          signal.addEventListener('abort', () => reject(new Error("Request aborted")), { once: true });
-        }
-      });
 
       try {
         const response: GenerateContentResponse = await Promise.race([
           generatePromise,
-          timeoutPromise,
-          abortPromise
+          timeoutPromise
         ]);
 
-        if (response.candidates && response.candidates.length > 0) {
-          const contentParts = response.candidates[0].content?.parts;
-          if (contentParts) {
-            for (const part of contentParts) {
-              if (part.inlineData && part.inlineData.data) {
-                return `data:image/png;base64,${part.inlineData.data}`;
-              }
-            }
-          }
-          
-          if (response.candidates[0].finishReason === "SAFETY") {
-            throw new SafetyError("Generation was blocked by Google's safety policy. This usually happens if the AI detects faces, people, or restricted branding in the source or generated result.");
-          }
+        const candidate = response.candidates?.[0];
+        if (!candidate) {
+          throw new ApiError("The AI model returned an empty response with no candidates. Suggestion: Try adjusting your prompt to be more descriptive.", 500);
         }
-        
-        throw new ApiError("No image was synthesized. The model returned a valid response but without image fragments.", 422);
-      } finally {
-        // Cleanup handled by promise racing
+
+        if (candidate.finishReason === "SAFETY") {
+          throw new SafetyError();
+        }
+
+        const imagePart = candidate.content?.parts.find(p => p.inlineData && p.inlineData.data);
+        if (imagePart?.inlineData?.data) {
+          return `data:image/png;base64,${imagePart.inlineData.data}`;
+        }
+
+        if (candidate.content?.parts.find(p => p.text)) {
+           throw new ApiError("The AI engine returned a text response instead of an image. Suggestion: Your prompt might be asking a question instead of giving a visual instruction.", 422);
+        }
+
+        throw new ApiError("Image synthesis successful but no raster data was returned in the response stream.", 500);
+      } catch (err) {
+        throw GeminiService.mapError(err);
       }
     });
   }
 
+  /**
+   * Batch generation utility for variation synthesis.
+   */
   public async generateImageBatch(
     mainImageBase64: string,
     prompts: string[],
@@ -240,7 +253,7 @@ class GeminiService {
     const promises = prompts.map(prompt => 
       this.generateOrEditImage(mainImageBase64, prompt, additionalImagesBase64, options)
         .catch(err => {
-          console.warn(`Variation failed for prompt "${prompt}":`, err);
+          logger.error(`Batch Synthesis Node Failed for prompt fragment: ${prompt.substring(0, 40)}...`, err);
           return null; 
         })
     );
@@ -250,7 +263,7 @@ class GeminiService {
   }
 }
 
-// Facade exports for cleaner consumption
+// Facade exports for app-wide use
 export const generateOrEditImage = (
   mainImageBase64: string,
   prompt: string,

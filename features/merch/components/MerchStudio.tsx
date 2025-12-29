@@ -9,8 +9,9 @@ interface MerchStudioProps {
 
 /**
  * MerchStudio Root Component
- * Refactored to focus exclusively on high-fidelity 2D mockup synthesis.
- * Compliance: WCAG 2.1 AA (Aria landmarks, responsive grid, focus management)
+ * Refactored to use an explicit CSS Grid for structural stability.
+ * Sidebar: Flexible width constrained between 340px and 420px via clamp.
+ * Viewport: Fills 1fr (remaining space).
  */
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
   const {
@@ -26,12 +27,12 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
 
   return (
     <div 
-      className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full min-h-0 w-full"
+      className="grid grid-cols-1 lg:grid-cols-[clamp(340px,30%,420px)_1fr] gap-8 xl:gap-12 h-full lg:h-[calc(100vh-180px)] min-h-0 w-full"
       role="region"
       aria-label="Merch Design Studio"
     >
-      {/* Configuration Column (Sidebar) */}
-      <div className="lg:col-span-4 xl:col-span-3 h-full min-h-0">
+      {/* Design Control Column (Sidebar) */}
+      <section className="h-full min-h-0 overflow-hidden flex flex-col order-2 lg:order-1">
         <MerchStudioSidebar 
           logoImage={logoImage}
           bgImage={bgImage}
@@ -61,10 +62,10 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
             clearActiveError();
           }}
         />
-      </div>
+      </section>
 
       {/* Main Preview Column (Viewport) */}
-      <div className="lg:col-span-8 xl:col-span-9 h-full min-h-0">
+      <section className="h-full min-h-0 overflow-hidden flex flex-col order-1 lg:order-2">
         <MerchStudioViewport 
           logoImage={logoImage}
           loading={loading}
@@ -79,7 +80,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
           onGenerateVariations={handleGenerateVariations}
           onTextOverlayChange={setTextOverlay}
         />
-      </div>
+      </section>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Input } from '@/shared/components/ui/Input';
 import { Sparkles, Palette, Zap } from 'lucide-react';
@@ -35,7 +34,12 @@ const getPresets = (productName: string) => {
       'Vintage 90s Wash', 
       'Minimalist Organic',
       'Vintage Sportswear',
-      'Streetwear Lux'
+      'Streetwear Lux',
+      'Cyberpunk Techwear',
+      'Quiet Luxury',
+      'Sustainable Earth',
+      'Y2K Pop',
+      'Avant-Garde'
     );
   }
   else if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
@@ -44,7 +48,7 @@ const getPresets = (productName: string) => {
   else if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('tech') || p.includes('mat')) {
     productSpecific.push('Cyberpunk Neon', 'Matte Black Stealth', 'Holographic Prism', 'Clean Desktop Setup', 'Vaporwave Glitch');
   }
-  else if (p.includes('poster') || p.includes('canvas') || p.includes('print') || p.includes('art')) {
+  else if (p.includes('poster') || p.includes('canvas') || p.includes('art') || p.includes('print')) {
     productSpecific.push('Gallery Exhibition', 'Mid-Century Modern', 'Industrial Loft', 'Risograph Style', 'Museum Lighting');
   }
   else if (p.includes('sticker') || p.includes('pin') || p.includes('button') || p.includes('badge')) {
@@ -76,9 +80,12 @@ const getProductSuggestions = (productName: string): string[] => {
       "Formal business casual aesthetic featuring a tailored fit, sharp ironed lines, and a professional workspace lighting",
       "Vintage sportswear vibes with retro color blocking, authentic fabric wear, and a sun-drenched stadium tunnel setting",
       "Streetwear lux aesthetic with premium heavy-weight cotton, metallic accents, and a minimal high-end boutique backdrop",
-      "Gritty urban techwear aesthetic with rain-slicked concrete and neon blue backlight",
-      "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones",
-      "Minimalist high-fashion editorial spread with dramatic shadows and a clean cyclorama wall"
+      "Cyberpunk techwear aesthetic with rain-slicked concrete, neon magenta accents, and futuristic synthetic materials",
+      "Quiet Luxury aesthetic focusing on ultra-premium cashmere textures, neutral tones, and soft natural window light",
+      "Sustainable eco-conscious design using raw hemp textures, earthy organic dyes, and a sun-drenched meadow background",
+      "Y2K Pop aesthetic with glossy vibrant plastics, prismatic reflections, and high-energy studio lighting",
+      "Avant-Garde fashion photography with dramatic sharp shadows, unconventional posing, and high-contrast monochrome style",
+      "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones"
     ];
   }
 

@@ -1,4 +1,3 @@
-
 import { MerchProduct } from '../types';
 
 export const MERCH_PRODUCTS: MerchProduct[] = [
@@ -218,5 +217,12 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'High-quality matte paper print',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
     defaultPrompt: 'A {style_preference} studio shot of a high-quality matte paper poster lying flat on a minimalist grey surface, showcasing this logo as a sharp, high-contrast graphic print.'
+  },
+  {
+    id: 'poster-standard',
+    name: 'Poster',
+    description: 'Minimalist wall decor',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
+    defaultPrompt: 'A {style_preference} professional product mockup of a high-quality poster print, showcasing this logo as the primary artwork in a sleek, modern environment.'
   }
 ];

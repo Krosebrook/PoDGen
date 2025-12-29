@@ -3,7 +3,7 @@ import { useEditorState } from '../hooks/useEditorState';
 import { ImageDropzone } from './ImageDropzone';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorCanvas } from './EditorCanvas';
-import { Button, Card } from '@/shared/components/ui';
+import { Button, Card, Tooltip } from '@/shared/components/ui';
 import { Wand2, Search, ExternalLink, FileSearch, Sparkles, Brain, Image as ImageIcon } from 'lucide-react';
 import { extractImageFile } from '@/shared/utils/file';
 
@@ -11,6 +11,10 @@ interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
 }
 
+/**
+ * Creative Image Editor
+ * Refactored to use a fixed-adaptive grid for the control panel and viewport.
+ */
 export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) => {
   const {
     model, handleModelChange,
@@ -60,7 +64,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6 animate-fadeIn">
+    <div className="flex flex-col h-full space-y-6 animate-fadeIn lg:h-[calc(100vh-180px)] min-h-0">
       {/* Dynamic AI Configuration Strip */}
       <EditorToolbar 
         model={model} 
@@ -76,15 +80,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
         isPro={isProKeySelected}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-h-0">
-        {/* Workspace Controls */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-1 lg:grid-cols-[clamp(360px,35%,480px)_1fr] gap-8 flex-1 min-h-0">
+        {/* Workspace Controls (Sidebar) */}
+        <div className="flex flex-col space-y-6 overflow-y-auto pr-2 custom-scrollbar">
           <ImageDropzone 
             selectedImage={selectedImage}
             onFileSelect={processFile}
             onReset={handleReset}
             error={error}
-            loading={loading && !resultImage && !analysisResult && prompt === ''}
+            loading={loading && !resultImage && !analysisResult}
           />
 
           <Card className={`shadow-xl bg-slate-800/50 border-slate-700 transition-all ${isDraggingOverPrompt ? 'ring-2 ring-blue-500 scale-[1.01] bg-blue-500/5' : ''}`}>
@@ -128,34 +132,38 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
               </div>
               
               <div className="flex gap-3">
-                <Button 
-                  onClick={handleGenerate} 
-                  loading={loading}
-                  loadingText="Synthesizing..."
-                  disabled={!prompt || loading}
-                  className="flex-1 shadow-lg shadow-blue-500/10"
-                  icon={<Wand2 className="w-5 h-5" />}
-                >
-                  Apply AI Edit
-                </Button>
-                {selectedImage && (
+                <Tooltip content="Synthesize changes based on your creative prompt" className="flex-1">
                   <Button 
-                    variant="secondary"
-                    onClick={handleAnalyze} 
+                    onClick={handleGenerate} 
                     loading={loading}
-                    loadingText="Analyzing..."
-                    disabled={loading}
-                    icon={<FileSearch className="w-5 h-5" />}
+                    loadingText="Synthesizing..."
+                    disabled={!prompt || loading}
+                    className="w-full shadow-lg shadow-blue-500/10"
+                    icon={<Wand2 className="w-5 h-5" />}
                   >
-                    Analysis
+                    Apply AI Edit
                   </Button>
+                </Tooltip>
+                {selectedImage && (
+                  <Tooltip content="Generate a deep visual analysis report of the source asset">
+                    <Button 
+                      variant="secondary"
+                      onClick={handleAnalyze} 
+                      loading={loading}
+                      loadingText="Analyzing..."
+                      disabled={loading}
+                      icon={<FileSearch className="w-5 h-5" />}
+                    >
+                      Analysis
+                    </Button>
+                  </Tooltip>
                 )}
               </div>
             </div>
           </Card>
 
           {analysisResult && (
-            <Card title="Intelligence Report" className="border-blue-500/20 bg-blue-500/5">
+            <Card title="Intelligence Report" className="border-blue-500/20 bg-blue-500/5 animate-fadeIn">
                <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap selection:bg-blue-500/30">
                   {analysisResult}
                </div>
@@ -163,7 +171,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
           )}
 
           {groundingSources.length > 0 && (
-            <section className="bg-slate-800/40 p-5 rounded-2xl border border-blue-500/10 backdrop-blur-sm">
+            <section className="bg-slate-800/40 p-5 rounded-2xl border border-blue-500/10 backdrop-blur-sm animate-fadeIn">
                <header className="flex items-center gap-2 mb-4">
                   <Search className="w-3.5 h-3.5 text-blue-400" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/80">Search Grounding Citations</span>
@@ -191,8 +199,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
           )}
         </div>
 
-        {/* High Precision Viewport */}
-        <div className="lg:col-span-7 xl:col-span-8 h-full flex flex-col">
+        {/* High Precision Viewport (Remaining Space) */}
+        <div className="h-full flex flex-col min-h-0">
           <EditorCanvas 
             loading={loading}
             resultImage={resultImage}
