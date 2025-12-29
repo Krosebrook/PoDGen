@@ -1,10 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Spinner, Button, Tooltip, Badge } from '@/shared/components/ui';
-import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, CheckCircle2, FileDown, Box, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, FileDown, Image as ImageIcon } from 'lucide-react';
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
 import { TextOverlayState } from '../hooks/useMerchState';
-import { Merch3DViewer } from './Merch3DViewer';
 
 interface MerchPreviewProps {
   logoImage: string | null;
@@ -22,8 +21,6 @@ interface MerchPreviewProps {
   onTextOverlayChange?: (overlay: TextOverlayState) => void;
 }
 
-type ViewMode = '2D' | '3D';
-
 export const MerchPreview: React.FC<MerchPreviewProps> = ({
   logoImage,
   loading,
@@ -39,7 +36,6 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   textOverlay,
   onTextOverlayChange
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('2D');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [jpgQuality, setJpgQuality] = useState(90);
   const [isExporting, setIsExporting] = useState(false);
@@ -164,7 +160,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
   return (
     <div className="flex flex-col h-full gap-8 p-1">
       <div className="bg-[#05070a] rounded-[3rem] border border-slate-800 p-0.5 relative overflow-hidden flex flex-col flex-1 shadow-inner group/preview">
-        {/* Top Control Bar */}
+        {/* Top Status Bar */}
         <div className="absolute top-8 left-8 right-8 z-20 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Badge variant="blue" icon={<Zap className="w-3 h-3" />}>RENDER: {productName}</Badge>
@@ -176,26 +172,14 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
             )}
           </div>
           
-          <div className="flex bg-slate-900/80 backdrop-blur-md p-1 rounded-2xl border border-white/10 shadow-2xl">
-            <button 
-              onClick={() => setViewMode('2D')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === '2D' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <ImageIcon className="w-3.5 h-3.5" /> AI Render
-            </button>
-            <button 
-              onClick={() => setViewMode('3D')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === '3D' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Box className="w-3.5 h-3.5" /> 3D Simulator
-            </button>
+          <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-2">
+            <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">2D Synthesis View</span>
           </div>
         </div>
 
         <div ref={containerRef} className="flex-1 flex items-center justify-center relative overflow-hidden group/canvas">
-          {viewMode === '3D' && logoImage ? (
-            <Merch3DViewer logo={logoImage} productName={productName} />
-          ) : loading ? (
+          {loading ? (
             <div className="flex flex-col items-center gap-6 animate-fadeIn" aria-live="polite">
               <Spinner className="w-12 h-12 text-blue-500" />
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Rendering Master...</p>
@@ -243,7 +227,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
           )}
         </div>
 
-        {activeImage && viewMode === '2D' && (
+        {activeImage && (
           <div className="p-8 bg-slate-900/50 backdrop-blur-2xl border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-4 bg-slate-800/50 p-2 rounded-2xl border border-slate-700">
               <div className="flex gap-1 p-1 bg-slate-900 rounded-xl">

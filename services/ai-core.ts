@@ -46,6 +46,9 @@ class AICoreService {
     return AICoreService.instance;
   }
 
+  /**
+   * Always retrieves the current API key from the environment.
+   */
   private getApiKey(): string {
     const apiKey = process.env.API_KEY;
     if (!apiKey) throw new AuthenticationError("API_KEY_MISSING: Environment key unavailable.");
@@ -63,7 +66,6 @@ class AICoreService {
     const status = error?.status || error?.response?.status;
     const lowerMsg = message.toLowerCase();
 
-    // Map HTTP Statuses
     if (status === 429) return new RateLimitError();
     if (status === 401 || status === 403) {
       if (lowerMsg.includes("not found") || lowerMsg.includes("billing")) {
@@ -72,7 +74,6 @@ class AICoreService {
       return new AuthenticationError();
     }
 
-    // Map Specific Gemini Failure Modes
     if (lowerMsg.includes("safety") || lowerMsg.includes("blocked") || lowerMsg.includes("candidate")) {
       return new SafetyError(`SAFETY_BLOCK: ${message}`);
     }
@@ -81,13 +82,12 @@ class AICoreService {
       return new ApiError(`SYSTEM_OVERLOAD: ${message}`, 503);
     }
 
-    if (lowerMsg.includes("dimension") || lowerMsg.includes("resolution") || lowerMsg.includes("too large")) {
-      return new ApiError(`RESOURCE_LIMIT: ${message}`, 400);
-    }
-
     return new ApiError(message, status || 500);
   }
 
+  /**
+   * Orchestrates content generation with retry logic.
+   */
   public async generate(
     prompt: string,
     images: string[] = [],
@@ -98,13 +98,16 @@ class AICoreService {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
+        // ALWAYS create a fresh instance per request to ensure latest key is used.
         const apiKey = this.getApiKey();
-        return await this.executeRequest(apiKey, prompt, images, config);
+        const ai = new GoogleGenAI({ apiKey });
+        
+        return await this.executeRequest(ai, prompt, images, config);
       } catch (error) {
         lastError = error;
         const normalized = this.normalizeError(error);
         
-        // Critical failures that shouldn't be retried
+        // Finalize immediately on non-transient or security errors
         if (
           normalized instanceof SafetyError || 
           normalized instanceof AuthenticationError || 
@@ -125,12 +128,11 @@ class AICoreService {
   }
 
   private async executeRequest(
-    apiKey: string,
+    ai: GoogleGenAI,
     prompt: string,
     images: string[] = [],
     config: AIRequestConfig
   ): Promise<AIResponse> {
-    const ai = new GoogleGenAI({ apiKey });
     const parts: Part[] = images.filter(Boolean).map(img => ({
       inlineData: { data: cleanBase64(img), mimeType: getMimeType(img) }
     }));
@@ -143,11 +145,14 @@ class AICoreService {
       seed: config.seed,
     };
 
+    // Budget Coordination: Reserve tokens for output when thinking is enabled
     if (config.thinkingBudget !== undefined) {
       const budget = config.thinkingBudget;
       generationConfig.thinkingConfig = { thinkingBudget: budget };
       if (config.maxOutputTokens) {
-        generationConfig.maxOutputTokens = Math.max(config.maxOutputTokens, budget + 100);
+        generationConfig.maxOutputTokens = Math.max(config.maxOutputTokens, budget + 1024);
+      } else {
+        generationConfig.maxOutputTokens = budget + 2048;
       }
     } else if (config.maxOutputTokens) {
       generationConfig.maxOutputTokens = config.maxOutputTokens;

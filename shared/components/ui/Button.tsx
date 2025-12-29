@@ -53,8 +53,8 @@ export const Button: React.FC<ButtonProps> = ({
       </div>
       
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center gap-2 animate-fadeIn">
-          <Spinner className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <div className="absolute inset-0 flex items-center justify-center gap-3 animate-fadeIn">
+          <Spinner className="w-5 h-5 shrink-0" aria-hidden="true" />
           {loadingText && <span className="text-[10px] uppercase tracking-widest font-black">{loadingText}</span>}
         </div>
       )}

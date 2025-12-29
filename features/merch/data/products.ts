@@ -224,5 +224,12 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Minimalist wall decor',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
     defaultPrompt: 'A {style_preference} professional product mockup of a high-quality poster print, showcasing this logo as the primary artwork in a sleek, modern environment.'
+  },
+  {
+    id: 'sticker-round',
+    name: 'Round Sticker',
+    description: 'Glossy vinyl sticker',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Sticker',
+    defaultPrompt: 'A {style_preference} product photo of a round glossy vinyl sticker with a white border, placed on a neutral background.'
   }
 ];

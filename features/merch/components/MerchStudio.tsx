@@ -9,7 +9,10 @@ interface MerchStudioProps {
 
 /**
  * MerchStudio Root Component
- * Orchestrates the design sidebar and high-precision viewport.
+ * 
+ * Implements a modern dual-pane workspace using CSS Grid.
+ * Sidebar: Flexible width via clamp(340px, 30%, 420px) to ensure usability across display densities.
+ * Viewport: Fluid 1fr distribution for maximum visual area.
  */
 export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) => {
   const {
@@ -26,11 +29,18 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
   return (
     <div 
       className="grid grid-cols-1 lg:grid-cols-[clamp(340px,30%,420px)_1fr] gap-8 xl:gap-12 h-full lg:h-[calc(100vh-180px)] min-h-0 w-full animate-fadeIn"
-      role="region"
-      aria-label="Merch Design Studio"
+      role="main"
+      aria-label="Merch Design Workspace"
     >
-      {/* Design Control Column (Sidebar) */}
-      <section className="h-full min-h-0 overflow-hidden flex flex-col order-2 lg:order-1">
+      {/* 
+        Design Control Column (Sidebar) 
+        On mobile, this appears below the preview (order-2) to prioritize visual feedback.
+        On desktop, it is the primary controller (order-1).
+      */}
+      <section 
+        className="h-full min-h-0 overflow-hidden flex flex-col order-2 lg:order-1"
+        aria-label="Design Controls"
+      >
         <MerchStudioSidebar 
           logoImage={logoImage}
           bgImage={bgImage}
@@ -44,6 +54,7 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
           isUploadingBg={isUploadingBg}
           activeError={activeError}
           errorSuggestion={errorSuggestion}
+          // Fix: Use correctly destructured setter names from useMerchController
           onSelectProduct={setSelectedProduct}
           onStyleChange={setStylePreference}
           onTextOverlayChange={setTextOverlay}
@@ -62,8 +73,14 @@ export const MerchStudio: React.FC<MerchStudioProps> = ({ onImageGenerated }) =>
         />
       </section>
 
-      {/* Main Preview Column (Viewport) */}
-      <section className="h-full min-h-0 overflow-hidden flex flex-col order-1 lg:order-2">
+      {/* 
+        Main Preview Column (Viewport) 
+        Prioritized on mobile devices (order-1).
+      */}
+      <section 
+        className="h-full min-h-0 overflow-hidden flex flex-col order-1 lg:order-2"
+        aria-label="Interactive Preview Viewport"
+      >
         <MerchStudioViewport 
           logoImage={logoImage}
           loading={loading}

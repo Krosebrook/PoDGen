@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Settings2, RotateCcw, Layers, Sparkles, Lightbulb, Grid } from 'lucide-react';
 import { Tooltip, Button, Alert } from '@/shared/components/ui';
@@ -126,6 +127,7 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
                     variant="outline"
                     onClick={onGenerateVariations}
                     loading={isGeneratingVariations}
+                    loadingText="Exploring Variations..."
                     disabled={!resultImage || loading}
                     icon={<Grid className="w-4 h-4" />}
                     className="w-full h-12 rounded-xl text-[9px] tracking-widest uppercase font-black border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/5"
@@ -174,6 +176,7 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
             <Button 
               onClick={onGenerate} 
               loading={loading}
+              loadingText="Synthesizing Masterpiece..."
               disabled={isGenerateDisabled}
               icon={<Layers className="w-5 h-5" />}
               className="w-full h-14 rounded-2xl shadow-xl shadow-blue-600/10 text-[9px] tracking-widest uppercase font-black"
@@ -188,6 +191,7 @@ export const MerchStudioSidebar: React.FC<MerchStudioSidebarProps> = ({
                 variant="indigo"
                 onClick={onGenerateVariations}
                 loading={isGeneratingVariations}
+                loadingText="Exploring Variations..."
                 disabled={!logoImage || loading}
                 icon={<Sparkles className="w-4 h-4" />}
                 className="w-full h-14 rounded-2xl shadow-xl shadow-indigo-600/10 text-[9px] tracking-widest uppercase font-black"
