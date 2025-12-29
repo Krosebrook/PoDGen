@@ -54,12 +54,25 @@ NanoGen Studio follows a **Feature-Based Module Pattern** to ensure strict separ
    ```
 
 2. **Environment Setup**:
-   Ensure `process.env.API_KEY` is configured in your environment or provided via the runtime injector.
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env and add your Gemini API key
+   # Get your key from: https://aistudio.google.com/app/apikey
+   ```
 
 3. **Development Mode**:
    ```bash
    npm run dev
    ```
+
+## 📚 Documentation
+
+- **[AUDIT.md](./AUDIT.md)** - Comprehensive project audit (high & low level)
+- **[TODO.md](./TODO.md)** - Prioritized action items and roadmap
+- **[SECURITY.md](./SECURITY.md)** - Security policy and best practices
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture deep-dive
 
 ## 📜 Compliance & Accessibility
 NanoGen Studio is built with **WCAG 2.1 AA** compliance in mind:
