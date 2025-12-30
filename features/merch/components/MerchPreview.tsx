@@ -4,6 +4,7 @@ import { ShoppingBag, Download, AlertCircle, Sparkles, Zap, Sliders, Layers, Fil
 import { saveImage, ExportFormat } from '@/shared/utils/image';
 import { MerchVariations } from './MerchVariations';
 import { TextOverlayState } from '../hooks/useMerchState';
+import { logger } from '@/shared/utils/logger';
 
 interface MerchPreviewProps {
   logoImage: string | null;
@@ -56,7 +57,7 @@ export const MerchPreview: React.FC<MerchPreviewProps> = ({
     try {
       await saveImage(img, filename, exportFormat, 2, textOverlay, jpgQuality / 100);
     } catch (err) {
-      console.error("EXPORT_FAILURE:", err);
+      logger.error("EXPORT_FAILURE", err);
     } finally {
       setIsExporting(false);
     }
