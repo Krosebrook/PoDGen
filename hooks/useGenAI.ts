@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 // Correcting the import to use the exported geminiService instance from services/gemini
 import { geminiService } from '../services/gemini';
 import { AppError } from '../shared/utils/errors';
+import { logger } from '../shared/utils/logger';
 
 interface UseGenAIResult {
   loading: boolean;
@@ -46,7 +47,7 @@ export const useGenAI = (): UseGenAIResult => {
       setResultImage(result.image || null);
       return true;
     } catch (err: any) {
-      console.error("GenAI Hook caught error:", err);
+      logger.error("GenAI Hook caught error", err);
       
       // Since the service now guarantees AppError types, we can safely use the message
       // or fall back to a generic one if something completely unexpected happens.

@@ -5,6 +5,7 @@ import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import { Upload, Wand2, Download, RefreshCw, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { readImageFile, extractImageFile } from '../utils/file';
+import { logger } from '../shared/utils/logger';
 
 interface ImageEditorProps {
   onImageGenerated: (url: string, prompt: string) => void;
@@ -36,7 +37,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ onImageGenerated }) =>
       setSelectedImage(base64);
       reset(); // Clear previous results
     } catch (err: any) {
-      console.error("File processing error:", err);
+      logger.error("File processing error", err);
       setLocalError(err.message || "Failed to process file.");
     }
   }, [reset]);

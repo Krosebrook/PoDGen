@@ -2,6 +2,7 @@ import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
 import { AppError, ApiError, AuthenticationError, SafetyError, RateLimitError } from '../shared/utils/errors';
 import { cleanBase64, getMimeType } from '../shared/utils/image';
 import { logger } from '../shared/utils/logger';
+import { DEFAULT_RETRY_COUNT, RETRY_BASE_DELAY_MS, RETRY_MAX_JITTER_MS, DEFAULT_THINKING_BUDGET, DEFAULT_MAX_OUTPUT_TOKENS } from '../shared/constants';
 
 export type AIModelType = 
   | 'gemini-3-flash-preview' 
@@ -37,7 +38,6 @@ export interface AIResponse {
 
 class AICoreService {
   private static instance: AICoreService;
-  private readonly DEFAULT_RETRIES = 2;
 
   private constructor() {}
 
@@ -93,7 +93,7 @@ class AICoreService {
     images: string[] = [],
     config: AIRequestConfig
   ): Promise<AIResponse> {
-    const retries = config.maxRetries ?? this.DEFAULT_RETRIES;
+    const retries = config.maxRetries ?? DEFAULT_RETRY_COUNT;
     let lastError: any;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -117,7 +117,7 @@ class AICoreService {
         }
 
         if (attempt < retries) {
-          const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500);
+          const delay = Math.pow(2, attempt) * RETRY_BASE_DELAY_MS + (Math.random() * RETRY_MAX_JITTER_MS);
           logger.warn(`AICore Retry ${attempt + 1}/${retries}: ${normalized.message}`);
           await this.sleep(delay);
           continue;
@@ -152,7 +152,7 @@ class AICoreService {
       if (config.maxOutputTokens) {
         generationConfig.maxOutputTokens = Math.max(config.maxOutputTokens, budget + 1024);
       } else {
-        generationConfig.maxOutputTokens = budget + 2048;
+        generationConfig.maxOutputTokens = budget + DEFAULT_MAX_OUTPUT_TOKENS;
       }
     } else if (config.maxOutputTokens) {
       generationConfig.maxOutputTokens = config.maxOutputTokens;
