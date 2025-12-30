@@ -143,21 +143,8 @@ For detailed architecture documentation, see **[ARCHITECTURE.md](./ARCHITECTURE.
    ```
    > ⏱️ First install takes ~2-3 minutes for 198 packages
 
-3. **Configure environment**
-   ```bash
-   # Copy environment template
-   cp .env.example .env
-   
-   # Edit .env and add your Gemini API key
-   # Get your key from: https://aistudio.google.com/app/apikey
-   nano .env  # or use your preferred editor
-   ```
-   
-   Your `.env` should look like:
-   ```env
-   API_KEY=your_gemini_api_key_here
-   NODE_ENV=development
-   ```
+2. **Environment Setup**:
+   Ensure `process.env.API_KEY` is configured in your environment or provided via the runtime injector.
 
 4. **Start development server**
    ```bash
@@ -201,106 +188,6 @@ Build output: `dist/` directory (~603 KB total, ~156 KB gzipped)
 **Solution:** Check file size (<10MB) and format (PNG, JPEG, WebP only)
 
 For more troubleshooting, see **[AUDIT.md](./AUDIT.md)** or open an issue.
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| **[CHANGELOG.md](./CHANGELOG.md)** | Version history and release notes |
-| **[ROADMAP.md](./ROADMAP.md)** | Product roadmap from MVP to v2.0+ |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture deep-dive |
-| **[CONTRIBUTING.md](./CONTRIBUTING.md)** | Contribution guidelines for developers |
-| **[SECURITY.md](./SECURITY.md)** | Security policy and vulnerability reporting |
-| **[AUDIT.md](./AUDIT.md)** | Comprehensive project audit report |
-| **[TODO.md](./TODO.md)** | Prioritized action items and task tracking |
-| **[agents.md](./agents.md)** | Agent/module documentation (hooks, services) |
-| **[claude.md](./claude.md)** | Claude AI assistant instructions |
-| **[gemini.md](./gemini.md)** | Gemini API integration guide |
-
-### Quick Links
-
-- **Getting Started**: [README.md](#quick-start) (this file)
-- **API Reference**: [gemini.md](./gemini.md)
-- **Architecture Guide**: [ARCHITECTURE.md](./ARCHITECTURE.md)
-- **Roadmap**: [ROADMAP.md](./ROADMAP.md)
-- **Contribute**: [CONTRIBUTING.md](./CONTRIBUTING.md)
-
-## 🤝 Contributing
-
-We welcome contributions from the community! Here's how you can help:
-
-### Ways to Contribute
-
-- 🐛 **Report Bugs**: [Open an issue](https://github.com/Krosebrook/PoDGen/issues)
-- 💡 **Suggest Features**: [Start a discussion](https://github.com/Krosebrook/PoDGen/discussions)
-- 📝 **Improve Documentation**: Submit PRs for docs
-- 🎨 **Add Templates**: Contribute product templates or style presets
-- 💻 **Write Code**: Fix bugs or implement features
-
-### Contribution Workflow
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to your fork (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-**Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.**
-
-### Good First Issues
-
-Look for issues labeled:
-- `good first issue` - Perfect for newcomers
-- `help wanted` - Community assistance needed
-- `documentation` - Documentation improvements
-
-## 📊 Project Status
-
-### Current Version: 0.0.0 (MVP Complete)
-
-**Status:** ✅ Functional, ⚠️ Not Production-Ready
-
-**What Works:**
-- All core features (Editor, Merch Studio, Integrations)
-- AI integration with multiple Gemini models
-- Responsive UI with Tailwind CSS
-- Image processing and canvas export
-- 3D product viewer
-
-**What's Missing (v1.0 Blockers):**
-- Testing infrastructure (0% coverage)
-- Production-grade security
-- Error boundaries
-- CI/CD pipeline
-- Performance monitoring
-
-**Next Milestone:** v0.1.0 Foundation (2-3 weeks)
-
-See **[ROADMAP.md](./ROADMAP.md)** for detailed planning.
-
-## 🛡️ Security & Privacy
-
-### Data Handling
-
-- ✅ **No Data Collection**: We don't collect or store user data
-- ✅ **Client-Side Processing**: All file handling happens in your browser
-- ✅ **No Analytics**: Zero tracking scripts or telemetry (by default)
-- ⚠️ **API Processing**: Images/prompts sent to Google Gemini API for processing
-
-### Known Security Considerations
-
-**Current (v0.0.0):**
-- Platform API keys stored in browser localStorage (unencrypted)
-- Client-side file validation only
-- No rate limiting (relies on Gemini API limits)
-
-**Planned (v0.1.0):**
-- Encrypted localStorage for API keys
-- Server-side input validation
-- Client-side rate limiting
-- Content Security Policy (CSP) headers
-
-See **[SECURITY.md](./SECURITY.md)** for full security policy and vulnerability reporting.
 
 ## 📜 Compliance & Accessibility
 
