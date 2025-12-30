@@ -1,8 +1,8 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppMode } from '@/shared/types';
-import { Zap, Wand2, Shirt, Code } from 'lucide-react';
+import { Zap, Wand2, Shirt, Code, Database } from 'lucide-react';
 import { logger } from '@/shared/utils/logger';
+import { Badge } from '../ui';
 
 interface ShellProps {
   activeTab: AppMode;
@@ -11,6 +11,18 @@ interface ShellProps {
 }
 
 export const Shell: React.FC<ShellProps> = ({ activeTab, onTabChange, children }) => {
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    const hasEditor = localStorage.getItem('nanogen_editor_session');
+    const hasMerch = localStorage.getItem('nanogen_merch_session');
+    if (hasEditor || hasMerch) {
+      setRestored(true);
+      const t = setTimeout(() => setRestored(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   const handleTabChange = (tab: AppMode) => {
     logger.debug(`Navigating to tab: ${tab}`);
     onTabChange(tab);
@@ -18,16 +30,22 @@ export const Shell: React.FC<ShellProps> = ({ activeTab, onTabChange, children }
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col font-sans selection:bg-blue-500/30">
-      {/* Responsive Navigation Hub */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Zap className="w-5 h-5 text-white fill-white" />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Zap className="w-5 h-5 text-white fill-white" />
+              </div>
+              <span className="font-bold text-xl tracking-tight hidden sm:inline bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                NanoGen Studio
+              </span>
             </div>
-            <span className="font-bold text-xl tracking-tight hidden sm:inline bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-              NanoGen Studio
-            </span>
+            {restored && (
+              <Badge variant="blue" icon={<Database className="w-3 h-3" />} className="animate-fadeIn">
+                Local Session Restored
+              </Badge>
+            )}
           </div>
           
           <nav className="flex items-center gap-1 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50" role="tablist">
@@ -51,20 +69,16 @@ export const Shell: React.FC<ShellProps> = ({ activeTab, onTabChange, children }
             />
           </nav>
 
-          <div className="flex items-center gap-4">
-             {/* Dynamic context actions could go here */}
-          </div>
+          <div className="flex items-center gap-4" />
         </div>
       </header>
 
-      {/* Primary Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
         <div className="h-full">
           {children}
         </div>
       </main>
 
-      {/* Global CSS Inject */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -82,6 +96,12 @@ export const Shell: React.FC<ShellProps> = ({ activeTab, onTabChange, children }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #334155;
           border-radius: 10px;
+        }
+        /* Mobile safe area padding for PWA standalone mode */
+        @supports(padding: max(0px)) {
+          main {
+            padding-bottom: max(2rem, env(safe-area-inset-bottom));
+          }
         }
       `}</style>
     </div>

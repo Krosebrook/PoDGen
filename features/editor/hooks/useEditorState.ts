@@ -3,25 +3,65 @@ import { aiCore, AIModelType, AspectRatio, ImageSize } from '@/services/ai-core'
 import { readImageFile } from '@/shared/utils/file';
 import { logger } from '@/shared/utils/logger';
 
+const STORAGE_KEY = 'nanogen_editor_session';
+
 export const useEditorState = (onImageGenerated?: (url: string, prompt: string) => void) => {
-  // Configuration State
-  const [model, setModel] = useState<AIModelType>('gemini-2.5-flash-image');
+  // Load initial state from LocalStorage
+  const [model, setModel] = useState<AIModelType>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.model || 'gemini-2.5-flash-image';
+      } catch (e) {}
+    }
+    return 'gemini-2.5-flash-image';
+  });
+
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("1:1");
   const [imageSize, setImageSize] = useState<ImageSize>("1K");
   const [useSearch, setUseSearch] = useState(false);
   const [useThinking, setUseThinking] = useState(false);
   const [isProKeySelected, setIsProKeySelected] = useState(false);
 
-  // Payload State
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.selectedImage || null;
+      } catch (e) {}
+    }
+    return null;
+  });
+
+  const [prompt, setPrompt] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.prompt || '';
+      } catch (e) {}
+    }
+    return '';
+  });
+
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [groundingSources, setGroundingSources] = useState<any[]>([]);
   
-  // UI Synchronization
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Persistence Effect
+  useEffect(() => {
+    const session = {
+      model,
+      selectedImage,
+      prompt
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  }, [model, selectedImage, prompt]);
 
   useEffect(() => {
     const checkKeySelection = async () => {
@@ -65,25 +105,16 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
   const handlePromptImageDrop = useCallback(async (file: File) => {
     setLoading(true);
     setError(null);
-    logger.info(`Handling prompt image drop for file: ${file.name}`);
-
     try {
       const base64 = await readImageFile(file);
       setSelectedImage(base64);
       setResultImage(null);
-      setAnalysisResult(null);
-      setGroundingSources([]);
-
-      // Automatically describe the dropped image to populate the prompt
       const res = await aiCore.generate(
         "Describe this image in detail. This description will be used as a prompt for an AI image editor. Focus on the subject, style, and artistic elements. Keep it under 60 words.",
         [base64],
         { model: 'gemini-3-flash-preview' }
       );
-
-      if (res.text) {
-        setPrompt(res.text.trim());
-      }
+      if (res.text) setPrompt(res.text.trim());
     } catch (err: any) {
       setError(err.message || "Failed to process image drop.");
     } finally {
@@ -98,11 +129,9 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
     setLoading(true);
     setError(null);
     setGroundingSources([]);
-    logger.info(`Initiating AI task: ${intent}`);
 
     try {
       const targetModel = intent === 'analyze' ? 'gemini-3-pro-preview' : model;
-      
       const res = await aiCore.generate(
         intent === 'analyze' ? (prompt || "Explain the visual elements.") : prompt,
         selectedImage ? [selectedImage] : [],
@@ -113,13 +142,13 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
           useSearch,
           thinkingBudget: useThinking ? 32768 : undefined,
           systemInstruction: intent === 'analyze' 
-            ? "Context: Professional Art Analyst. Describe composition, technique, and subject." 
-            : "Context: Creative Image Editor. Follow the instruction with pixel-perfect accuracy."
+            ? "Context: Professional Art Analyst." 
+            : "Context: Creative Image Editor."
         }
       );
 
       if (intent === 'analyze') {
-        setAnalysisResult(res.text || "Analysis complete but no text returned.");
+        setAnalysisResult(res.text || "Analysis complete.");
       } else {
         if (res.image) {
           setResultImage(res.image);
@@ -128,25 +157,22 @@ export const useEditorState = (onImageGenerated?: (url: string, prompt: string) 
           setAnalysisResult(res.text);
         }
       }
-
       if (res.groundingSources) setGroundingSources(res.groundingSources);
-      logger.info(`AI task completed successfully: ${intent}`);
     } catch (err: any) {
       setError(err.message || "Internal generation error.");
-      if (err.message?.includes("not found")) setIsProKeySelected(false);
     } finally {
       setLoading(false);
     }
   };
 
   const handleReset = useCallback(() => {
-    logger.debug("Resetting editor state");
     setSelectedImage(null);
     setResultImage(null);
     setAnalysisResult(null);
     setPrompt('');
     setError(null);
     setGroundingSources([]);
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return {

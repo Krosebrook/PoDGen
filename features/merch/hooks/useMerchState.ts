@@ -26,14 +26,49 @@ export interface TextOverlayState {
   bgRounding: number;
 }
 
+const STORAGE_KEY = 'nanogen_merch_session';
+
 export const useMerchController = (onImageGenerated?: (url: string, prompt: string) => void) => {
-  const [assets, setAssets] = useState<{ logo: string | null; bg: string | null }>({ logo: null, bg: null });
+  // State Initialization from LocalStorage
+  const [assets, setAssets] = useState<{ logo: string | null; bg: string | null }>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { logo: parsed.logo || null, bg: parsed.bg || null };
+      }
+    } catch (e) { logger.error("Store read error", e); }
+    return { logo: null, bg: null };
+  });
+
   const [loadingAssets, setLoadingAssets] = useState({ logo: false, bg: false });
-  const [config, setConfig] = useState({ product: MERCH_PRODUCTS[0], style: '' });
-  const [textOverlay, setTextOverlay] = useState<TextOverlayState>({
-    text: '', font: 'Inter, sans-serif', color: '#ffffff', size: 40, x: 50, y: 50,
-    align: 'center', rotation: 0, skewX: 0, underline: false, strikethrough: false,
-    opacity: 100, bgEnabled: false, bgColor: '#000000', bgPadding: 16, bgOpacity: 50, bgRounding: 8
+
+  const [config, setConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const prod = MERCH_PRODUCTS.find(p => p.id === parsed.productId) || MERCH_PRODUCTS[0];
+        return { product: prod, style: parsed.style || '' };
+      }
+    } catch (e) {}
+    return { product: MERCH_PRODUCTS[0], style: '' };
+  });
+
+  const [textOverlay, setTextOverlay] = useState<TextOverlayState>(() => {
+    const defaultText = {
+      text: '', font: 'Inter, sans-serif', color: '#ffffff', size: 40, x: 50, y: 50,
+      align: 'center', rotation: 0, skewX: 0, underline: false, strikethrough: false,
+      opacity: 100, bgEnabled: false, bgColor: '#000000', bgPadding: 16, bgOpacity: 50, bgRounding: 8
+    };
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.textOverlay) return parsed.textOverlay;
+      }
+    } catch (e) {}
+    return defaultText as TextOverlayState;
   });
 
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -41,6 +76,18 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
   const [loading, setLoading] = useState(false);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Persistence Effect
+  useEffect(() => {
+    const session = {
+      logo: assets.logo,
+      bg: assets.bg,
+      productId: config.product.id,
+      style: config.style,
+      textOverlay
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  }, [assets, config, textOverlay]);
 
   const handleAssetUpload = useCallback(async (file: File, type: 'logo' | 'bg') => {
     setLoadingAssets(prev => ({ ...prev, [type]: true }));
@@ -100,6 +147,20 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     }
   }, [assets, config, isGeneratingVariations]);
 
+  const clearLogo = () => {
+    setAssets(p => ({ ...p, logo: null }));
+    setResultImage(null);
+    setVariations([]);
+  };
+
+  const onReset = () => {
+    clearLogo();
+    setAssets(p => ({ ...p, bg: null }));
+    setError(null);
+    setConfig({ product: MERCH_PRODUCTS[0], style: '' });
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
   return {
     logoImage: assets.logo, bgImage: assets.bg, selectedProduct: config.product,
     stylePreference: config.style, resultImage, loading, variations, isGeneratingVariations,
@@ -111,8 +172,9 @@ export const useMerchController = (onImageGenerated?: (url: string, prompt: stri
     handleLogoUpload: (f: File) => handleAssetUpload(f, 'logo'),
     handleBgUpload: (f: File) => handleAssetUpload(f, 'bg'),
     handleGenerate, handleGenerateVariations,
-    clearLogo: () => { setAssets(p => ({ ...p, logo: null })); setResultImage(null); setVariations([]); },
+    clearLogo,
     clearBg: () => setAssets(p => ({ ...p, bg: null })),
-    clearActiveError: () => setError(null)
+    clearActiveError: () => setError(null),
+    onReset
   };
 };
