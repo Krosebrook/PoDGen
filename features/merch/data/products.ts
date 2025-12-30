@@ -231,5 +231,12 @@ export const MERCH_PRODUCTS: MerchProduct[] = [
     description: 'Glossy vinyl sticker',
     placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Sticker',
     defaultPrompt: 'A {style_preference} product photo of a round glossy vinyl sticker with a white border, placed on a neutral background.'
+  },
+  {
+    id: 'poster-main',
+    name: 'Poster',
+    description: 'Matte finish paper print',
+    placeholderImage: 'https://placehold.co/400x400/1e293b/ffffff?text=Poster',
+    defaultPrompt: 'A {style_preference} product shot of a large matte poster print of abstract art, prominently featuring this logo.'
   }
 ];
