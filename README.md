@@ -1,50 +1,70 @@
 # NanoGen Studio 2.5 ⚡️
 
-A world-class AI-native creative suite for rapid product visualization and advanced image synthesis, powered by the **Gemini 2.5 Flash Image** model. NanoGen Studio bridges the gap between raw brand assets and production-ready marketing materials through a seamless, high-fidelity interface.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.0.0-green.svg)](./CHANGELOG.md)
+[![Status](https://img.shields.io/badge/status-MVP-yellow.svg)](./ROADMAP.md)
 
-## 🚀 Key Value Propositions
+A world-class **AI-native creative suite** for rapid product visualization and advanced image synthesis, powered by the **Gemini 2.5 Flash Image** model. NanoGen Studio bridges the gap between raw brand assets and production-ready marketing materials through a seamless, high-fidelity interface.
 
-- **Zero-Latency Visualization**: Transform flat logos into cinematic product mockups in seconds.
-- **Creative Intelligence**: Leverage deep reasoning for complex image editing and contextual analysis.
-- **Production-Ready Exports**: High-precision canvas engine for generating high-resolution master files.
-- **Developer-First API**: Integrated code generation for cURL, Node.js, and Python workflows.
+---
 
-## 🛠 Feature Deep-Dive
+## ✨ Key Features
 
-### 1. Creative Editor (Gemini 2.5/3.0 Hybrid)
-The Creative Editor is a state-of-the-art canvas for non-destructive image manipulation.
-- **Semantic Editing**: "Add a sci-fi HUD," "Convert to oil painting," or "Remove background" via natural language.
-- **Deep Reasoning**: Enable "Thinking Mode" for complex, multi-step artistic instructions.
-- **Search Grounding**: Inject real-world context into generated images using Google Search integration.
-- **Contextual Analysis**: Generate detailed artistic reports and composition breakdowns of your source assets.
+### 🎨 Creative Editor
+Transform images with natural language instructions powered by Gemini AI
+- **Semantic Editing**: "Add cyberpunk lighting", "Remove background", "Turn into oil painting"
+- **Deep Reasoning Mode**: Complex, multi-step artistic transformations (32K token budget)
+- **Google Search Grounding**: Real-world context injection for better results
+- **Image Analysis**: Detailed composition and artistic breakdowns
 
-### 2. Merch Studio (AI Pipeline)
-A dedicated environment for brand expansion and physical product previewing.
-- **Variation Synthesis**: Generate 3 alternative camera angles and lighting setups simultaneously.
-- **Dynamic Typography**: Add, drag, and style high-resolution text overlays with legibility masks.
-- **Contextual Styles**: AI-generated style presets tailored to specific product categories (e.g., "Streetwear Grunge" for hoodies).
+### 👕 Merch Studio  
+Generate professional product mockups in seconds
+- **31 Product Templates**: T-shirts, hoodies, mugs, phone cases, and more
+- **Variation Generation**: 3 alternative angles and lighting setups automatically
+- **Text Overlays**: Drag-and-drop typography with advanced controls
+- **3D Preview**: Interactive Three.js product viewer
+- **Batch Export**: High-resolution (2K/4K) output in PNG/JPG/WebP
 
-### 3. Integration Hub
-Standardize your AI pipeline for downstream systems.
-- **Instant Code Snippets**: Pre-configured templates for cURL, Node.js, and Python.
-- **Platform Connectors**: Ready-to-use logic for Discord Webhooks, AWS S3, and generic REST backends.
+### 🔌 Integration Hub
+Code generation for platform integrations
+- **6 Platform Connectors**: Shopify, Printify, Etsy, TikTok, Amazon, Custom
+- **Language Support**: cURL, Node.js, Python
+- **API Key Management**: Secure local storage with encryption (coming in v0.1.0)
 
-## 🏗 Technical Architecture
+---
 
-NanoGen Studio follows a **Feature-Based Module Pattern** to ensure strict separation of concerns and extreme performance.
-
-- **Frontend**: React 19 (Concurrent Mode) + TypeScript
-- **Styling**: Tailwind CSS 3.4 (Design System Utility approach)
-- **AI Integration**: `@google/genai` (Google Generative AI SDK)
-- **State Management**: Domain-specific custom hooks with AbortController synchronization
-
-## 🚦 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 20.x or higher
-- A valid Google Gemini API Key
+
+- **Node.js** 20.x or higher ([Download](https://nodejs.org/))
+- **Google Gemini API Key** ([Get one free](https://aistudio.google.com/app/apikey))
 
 ### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Krosebrook/PoDGen.git
+cd PoDGen
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env and add your API_KEY
+
+# Start development server
+npm run dev
+```
+
+Visit `http://localhost:5173` to see the app! 🎉
+
+### Production Build
+
+```bash
+# Build for production
+npm run build
 
 1. **Clone & Install**:
    ```bash
@@ -62,12 +82,18 @@ NanoGen Studio follows a **Feature-Based Module Pattern** to ensure strict separ
    ```
 
 ## 📜 Compliance & Accessibility
-NanoGen Studio is built with **WCAG 2.1 AA** compliance in mind:
-- **ARIA-Landmarks**: Distinct regions for Sidebar, Viewport, and Navigation.
-- **Focus Management**: Controlled focus loops in configuration panels.
-- **Semantic Tooltips**: Every interactive element includes a functional explanation.
-- **Responsive Layout**: Fluid grid system that adapts from mobile inspection to desktop editing.
+
+NanoGen Studio is designed with **WCAG 2.1 AA** compliance in mind:
+
+- ♿ **Semantic HTML**: Proper heading hierarchy and landmarks
+- ⌨️ **Keyboard Navigation**: Full keyboard support
+- 🎯 **Focus Management**: Clear focus indicators
+- 📢 **Screen Reader Support**: ARIA labels and descriptions
+- 🎨 **Color Contrast**: Meets WCAG contrast ratios
+- 📱 **Responsive Design**: Mobile-first approach
 
 ---
 
-*Built with ❤️ by the NanoGen Engineering Team.*
+**Built with ❤️ by the NanoGen Engineering Team**
+
+[⭐ Star us on GitHub](https://github.com/Krosebrook/PoDGen) | [📖 Read the Docs](#-documentation) | [🐛 Report Bug](https://github.com/Krosebrook/PoDGen/issues) | [💡 Request Feature](https://github.com/Krosebrook/PoDGen/issues)

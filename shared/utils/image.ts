@@ -8,6 +8,19 @@ export const getMimeType = (b64: string): string => {
   return match ? match[1] : 'image/png';
 };
 
+import { logger } from './logger';
+import {
+  MAX_CANVAS_DIMENSION,
+  IMAGE_SMOOTHING_QUALITY,
+  TEXT_LINE_HEIGHT_MULTIPLIER,
+  TEXT_SHADOW_BLUR,
+  TEXT_SHADOW_OFFSET_Y,
+  DEFAULT_TEXT_BG_PADDING,
+  DEFAULT_TEXT_BG_ROUNDING,
+  DEFAULT_TEXT_BG_OPACITY,
+  DEFAULT_TEXT_OPACITY,
+} from '../constants';
+
 export type ExportFormat = 'png' | 'jpg' | 'webp';
 
 export interface TextOverlayConfig {
@@ -52,9 +65,8 @@ export const saveImage = async (
     });
 
     const canvas = document.createElement('canvas');
-    const maxDimension = 8192;
-    const w = Math.min(img.naturalWidth * scale, maxDimension);
-    const h = Math.min(img.naturalHeight * scale, maxDimension);
+    const w = Math.min(img.naturalWidth * scale, MAX_CANVAS_DIMENSION);
+    const h = Math.min(img.naturalHeight * scale, MAX_CANVAS_DIMENSION);
     
     canvas.width = w;
     canvas.height = h;
@@ -63,7 +75,7 @@ export const saveImage = async (
     if (!ctx) throw new Error("CANVAS_CONTEXT_FAILURE: Failed to acquire 2D context.");
 
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = IMAGE_SMOOTHING_QUALITY;
     
     // For JPG, fill white background if transparent
     if (format === 'jpg') {
@@ -92,14 +104,14 @@ export const saveImage = async (
       }
       
       const lines = overlay.text.split('\n');
-      const lineHeight = fontSize * 1.2;
+      const lineHeight = fontSize * TEXT_LINE_HEIGHT_MULTIPLIER;
       const totalHeight = lines.length * lineHeight;
 
       if (overlay.bgEnabled) {
         ctx.save();
-        const padding = (overlay.bgPadding ?? 16) * scale;
-        const rounding = (overlay.bgRounding ?? 8) * scale;
-        const bgOpacity = (overlay.bgOpacity ?? 50) / 100;
+        const padding = (overlay.bgPadding ?? DEFAULT_TEXT_BG_PADDING) * scale;
+        const rounding = (overlay.bgRounding ?? DEFAULT_TEXT_BG_ROUNDING) * scale;
+        const bgOpacity = (overlay.bgOpacity ?? DEFAULT_TEXT_BG_OPACITY) / 100;
         
         let maxLineWidth = 0;
         lines.forEach(line => {
@@ -124,12 +136,12 @@ export const saveImage = async (
         ctx.restore();
       } else {
         ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 10 * scale;
-        ctx.shadowOffsetY = 2 * scale;
+        ctx.shadowBlur = TEXT_SHADOW_BLUR * scale;
+        ctx.shadowOffsetY = TEXT_SHADOW_OFFSET_Y * scale;
       }
 
       ctx.fillStyle = overlay.color;
-      ctx.globalAlpha = (overlay.opacity ?? 100) / 100;
+      ctx.globalAlpha = (overlay.opacity ?? DEFAULT_TEXT_OPACITY) / 100;
       
       lines.forEach((line, i) => {
         const lineY = (i - (lines.length - 1) / 2) * lineHeight;
@@ -173,6 +185,6 @@ export const saveImage = async (
     canvas.width = 0;
     canvas.height = 0;
   } catch (error) {
-    console.error("EXPORT_ENGINE_CRITICAL:", error);
+    logger.error("EXPORT_ENGINE_CRITICAL", error);
   }
 };
