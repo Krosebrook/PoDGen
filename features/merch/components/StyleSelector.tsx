@@ -19,7 +19,8 @@ const getPresets = (productName: string) => {
     'Photorealistic', 
     'Minimalist Branding', 
     'Studio Lighting',
-    'Cinematic 8k'
+    'Cinematic 8k',
+    'Neo-Brutalism'
   ];
 
   const productSpecific: string[] = [];
@@ -39,17 +40,20 @@ const getPresets = (productName: string) => {
       'Quiet Luxury',
       'Sustainable Earth',
       'Y2K Pop',
-      'Avant-Garde'
+      'Avant-Garde',
+      'Gorpcore Outdoor',
+      'Retro Athletic',
+      'Workwear Utility'
     );
   }
   else if (p.includes('mug') || p.includes('bottle') || p.includes('tumbler') || p.includes('cup') || p.includes('glass')) {
-    productSpecific.push('Minimalist Ceramic', 'Cozy Morning Vibe', 'Dark Academia Study', 'Nordic Kitchen', 'Rustic Timber');
+    productSpecific.push('Minimalist Ceramic', 'Cozy Morning Vibe', 'Dark Academia Study', 'Nordic Kitchen', 'Rustic Timber', 'Artisan Pottery');
   }
   else if (p.includes('phone') || p.includes('case') || p.includes('laptop') || p.includes('tech') || p.includes('mat')) {
     productSpecific.push('Cyberpunk Neon', 'Matte Black Stealth', 'Holographic Prism', 'Clean Desktop Setup', 'Vaporwave Glitch');
   }
   else if (p.includes('poster') || p.includes('canvas') || p.includes('art') || p.includes('print')) {
-    productSpecific.push('Gallery Exhibition', 'Mid-Century Modern', 'Industrial Loft', 'Risograph Style', 'Museum Lighting');
+    productSpecific.push('Gallery Exhibition', 'Mid-Century Modern', 'Industrial Loft', 'Risograph Style', 'Museum Lighting', 'Bauhaus Geometry');
   }
   else if (p.includes('sticker') || p.includes('pin') || p.includes('button') || p.includes('badge')) {
     productSpecific.push('Die-Cut Vinyl', 'Pop Art Aesthetic', 'Retro Enamel Badge', 'Holographic Foil', 'Street Art Wheatpaste');
@@ -85,7 +89,9 @@ const getProductSuggestions = (productName: string): string[] => {
       "Sustainable eco-conscious design using raw hemp textures, earthy organic dyes, and a sun-drenched meadow background",
       "Y2K Pop aesthetic with glossy vibrant plastics, prismatic reflections, and high-energy studio lighting",
       "Avant-Garde fashion photography with dramatic sharp shadows, unconventional posing, and high-contrast monochrome style",
-      "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones"
+      "Vintage 1990s streetwear look with heavy film grain, sun-faded fabric, and nostalgic warm tones",
+      "Gorpcore outdoor aesthetic featuring durable technical fabrics, mountainside natural lighting, and rugged styling",
+      "Retro athletic look with collegiate lettering, heather grey textures, and a vintage gym locker room setting"
     ];
   }
 
@@ -95,7 +101,8 @@ const getProductSuggestions = (productName: string): string[] => {
       "Cozy morning setup in a sun-drenched minimalist cafe with soft steam rising",
       "Dark academia aesthetic featuring old books, candle-light, and rich wooden textures",
       "Nordic kitchen scene with clean white surfaces, natural linen, and soft diffused daylight",
-      "Minimalist ceramic focus with a smooth matte finish and sharp architectural shadows"
+      "Minimalist ceramic focus with a smooth matte finish and sharp architectural shadows",
+      "Artisan pottery vibe with hand-glazed textures and a rustic wooden table setting"
     ];
   }
 
@@ -105,7 +112,8 @@ const getProductSuggestions = (productName: string): string[] => {
       "Contemporary art gallery setting with track lighting and high ceilings",
       "Industrial loft interior with exposed brick, large windows, and mid-century furniture",
       "Clean museum wall with professional framing and precise spotlighting",
-      "Modern home office with Scandi-minimalist decor and soft plant shadows"
+      "Modern home office with Scandi-minimalist decor and soft plant shadows",
+      "Bauhaus geometry style with bold primary colors and clean architectural lines"
     ];
   }
 

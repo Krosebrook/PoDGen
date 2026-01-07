@@ -66,175 +66,20 @@ Visit `http://localhost:5173` to see the app! 🎉
 # Build for production
 npm run build
 
-# Preview production build
-npm run preview
-```
+1. **Clone & Install**:
+   ```bash
+   git clone https://github.com/your-repo/nanogen-studio.git
+   cd nanogen-studio
+   npm install
+   ```
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for hosting options (Vercel, Netlify, AWS, Docker).
+2. **Environment Setup**:
+   Ensure `process.env.API_KEY` is configured in your environment or provided via the runtime injector.
 
----
-
-## 📖 Documentation
-
-### Getting Started
-- **[Installation Guide](#installation)** - Set up your development environment
-- **[User Guide](#)** - Learn how to use features (coming soon)
-- **[FAQ](#)** - Frequently asked questions (coming soon)
-
-### Architecture & Development
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design patterns and technical overview
-- **[AGENTS.md](./AGENTS.md)** - AI agent architecture and model selection
-- **[GEMINI.md](./GEMINI.md)** - Comprehensive Gemini API integration guide
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to the project
-
-### Project Management
-- **[ROADMAP.md](./ROADMAP.md)** - Product roadmap from MVP to v2.0+
-- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
-- **[TODO.md](./TODO.md)** - Prioritized action items and tasks
-- **[AUDIT.md](./AUDIT.md)** - Comprehensive project audit report
-
-### Security & Deployment
-- **[SECURITY.md](./SECURITY.md)** - Security policy and best practices
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deployment guide for various platforms
-
----
-
-## 🏗️ Technical Stack
-
-- **Frontend**: React 19 with Concurrent Mode features
-- **Language**: TypeScript 5.8+ (strict mode)
-- **Build Tool**: Vite 6.2+ for lightning-fast HMR
-- **Styling**: Tailwind CSS 3.4 (utility-first)
-- **AI Integration**: `@google/genai` SDK v1.30+
-- **3D Rendering**: Three.js with @react-three/fiber
-- **Icons**: Lucide React
-- **State**: Custom hooks with AbortController
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
-
----
-
-## 🎯 Project Status
-
-### Current Version: v0.0.0 (MVP)
-
-**What's Working:**
-- ✅ All three feature modules (Editor, Merch, Integrations)
-- ✅ Multi-model AI support (Gemini 2.5/3.0/3 Pro)
-- ✅ 31 product templates with variation generation
-- ✅ Advanced text overlay system with drag-and-drop
-- ✅ High-resolution export (up to 4K)
-- ✅ 3D product preview
-- ✅ Platform integration code generation
-
-**What's Next (v0.1.0 - March 2025):**
-- ⏳ Testing infrastructure (Vitest + React Testing Library)
-- ⏳ CI/CD pipeline with GitHub Actions
-- ⏳ LocalStorage encryption for API keys
-- ⏳ ESLint configuration
-- ⏳ Enhanced documentation
-
-See [ROADMAP.md](./ROADMAP.md) for the complete product roadmap.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Make your changes** (follow our [coding standards](./CONTRIBUTING.md#coding-standards))
-4. **Add tests** if applicable
-5. **Commit your changes** (`git commit -m 'feat: add amazing feature'`)
-6. **Push to branch** (`git push origin feature/amazing-feature`)
-7. **Open a Pull Request**
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
-
-### Priority Areas for Contributors
-- 🧪 Testing (high priority!)
-- 📝 Documentation improvements
-- 🔌 New platform integrations
-- ♿ Accessibility enhancements
-- 🎨 UI/UX improvements
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## 🔒 Security
-
-We take security seriously. If you discover a security vulnerability, please:
-
-1. **DO NOT** open a public issue
-2. Email the maintainers directly (see [SECURITY.md](./SECURITY.md))
-3. Include detailed steps to reproduce
-
-See [SECURITY.md](./SECURITY.md) for our full security policy.
-
----
-
-## 🌟 Acknowledgments
-
-- **Google Gemini API** for powering our AI features
-- **React Team** for React 19 and amazing developer experience
-- **Vite Team** for blazing-fast build tooling
-- **Tailwind CSS** for the utility-first CSS framework
-- **Three.js** for 3D visualization capabilities
-- **All Contributors** who help make this project better
-
----
-
-## 📊 Stats
-
-- **Lines of Code**: ~6,200
-- **Components**: 27
-- **Features**: 3 major modules
-- **AI Models**: 5 supported
-- **Product Templates**: 31
-- **Platform Integrations**: 6
-
----
-
-## 💬 Support & Community
-
-- **Issues**: [GitHub Issues](https://github.com/Krosebrook/PoDGen/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Krosebrook/PoDGen/discussions)
-- **Documentation**: [Full Docs](#-documentation)
-
----
-
-## 🗺️ Roadmap Highlights
-
-### v0.1.0 (Q1 2025) - Foundation
-- Testing infrastructure
-- CI/CD pipeline
-- Security enhancements
-
-### v0.2.0 (Q2 2025) - Quality
-- Performance optimization
-- 80%+ test coverage
-- Accessibility improvements
-
-### v1.0.0 (Q3 2025) - Production
-- Backend API service
-- User authentication
-- Feature completeness
-
-### v2.0.0+ (Q4 2025) - Advanced
-- AI Video Mockups (Veo 3.1)
-- Auto SEO Copywriting
-- Direct Merchant Bridge
-- TikTok Shop Live
-
-See [ROADMAP.md](./ROADMAP.md) for complete details.
-
----
+3. **Development Mode**:
+   ```bash
+   npm run dev
+   ```
 
 ## 📜 Compliance & Accessibility
 
