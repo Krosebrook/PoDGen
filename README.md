@@ -66,20 +66,31 @@ Visit `http://localhost:5173` to see the app! 🎉
 # Build for production
 npm run build
 
-1. **Clone & Install**:
-   ```bash
-   git clone https://github.com/your-repo/nanogen-studio.git
-   cd nanogen-studio
-   npm install
-   ```
+# Preview production build
+npm run preview
+```
 
-2. **Environment Setup**:
-   Ensure `process.env.API_KEY` is configured in your environment or provided via the runtime injector.
+### Testing
 
-3. **Development Mode**:
-   ```bash
-   npm run dev
-   ```
+NanoGen Studio uses [Vitest](https://vitest.dev/) for fast, Vite-native testing.
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (for development)
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+**Current Test Coverage:** 41.93% overall, 100% for error classes and core utilities
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed testing guidelines.
 
 ## 📜 Compliance & Accessibility
 
