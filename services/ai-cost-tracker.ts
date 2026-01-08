@@ -29,8 +29,9 @@ interface RequestMetrics {
 }
 
 /**
- * Approximate token costs per 1M tokens (as of 2024)
- * These are estimates and should be updated based on actual pricing
+ * Approximate token costs per 1M tokens (as of January 2026)
+ * These are estimates and should be verified against actual Google pricing
+ * TODO: Update pricing regularly or fetch from pricing API
  */
 const MODEL_COSTS: Record<AIModelType, { input: number; output: number }> = {
   'gemini-3-flash-preview': { input: 0.075, output: 0.30 },

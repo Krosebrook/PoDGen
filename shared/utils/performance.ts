@@ -42,11 +42,11 @@ export function debounce<T extends (...args: any[]) => any>(
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) => ReturnType<T> | undefined {
   let inThrottle: boolean = false;
-  let lastResult: ReturnType<T>;
+  let lastResult: ReturnType<T> | undefined;
 
-  return function throttled(...args: Parameters<T>) {
+  return function throttled(...args: Parameters<T>): ReturnType<T> | undefined {
     if (!inThrottle) {
       lastResult = func(...args);
       inThrottle = true;
@@ -66,16 +66,17 @@ export function throttle<T extends (...args: any[]) => any>(
  * 
  * @param callback - Function to execute during idle time
  * @param options - Optional timeout in milliseconds
+ * @returns Handle that can be used with cancelIdle
  */
 export function runWhenIdle(
   callback: () => void,
   options?: { timeout?: number }
-): void {
+): number {
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(callback, options);
+    return window.requestIdleCallback(callback, options);
   } else {
     // Fallback for browsers that don't support requestIdleCallback
-    setTimeout(callback, options?.timeout || 1);
+    return setTimeout(callback, options?.timeout || 1) as unknown as number;
   }
 }
 

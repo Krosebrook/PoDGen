@@ -71,9 +71,9 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check with fallback
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+    CMD curl -f http://localhost:3000/ || wget --spider -q http://localhost:3000/ || exit 1
 
 # Start application
 CMD ["serve", "-s", "dist", "-l", "3000"]
@@ -121,9 +121,9 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
-# Health check
+# Health check with fallback
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+    CMD curl -f http://localhost:3000/ || wget --spider -q http://localhost:3000/ || exit 1
 
 # Environment variables for GPU
 ENV NVIDIA_VISIBLE_DEVICES=all

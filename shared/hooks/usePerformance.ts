@@ -164,14 +164,10 @@ export function useIdleCallback(
   deps: React.DependencyList
 ): void {
   useEffect(() => {
-    const handle = runWhenIdle(callback, { timeout: 1000 }) as unknown as number;
+    const handle = runWhenIdle(callback, { timeout: 1000 });
 
     return () => {
-      if ('cancelIdleCallback' in window) {
-        window.cancelIdleCallback(handle);
-      } else {
-        clearTimeout(handle);
-      }
+      cancelIdle(handle);
     };
   }, deps);
 }
