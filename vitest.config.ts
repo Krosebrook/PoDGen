@@ -24,10 +24,13 @@ export default defineConfig({
         'vitest.config.ts',
       ],
       all: true,
-      lines: 0,
-      functions: 0,
-      branches: 0,
-      statements: 0,
+      // Coverage thresholds aligned with v0.1.0 roadmap goals
+      // Initial thresholds are set low to not block development
+      // Will be progressively increased in v0.2.0 (80%+)
+      lines: 40,        // v0.1.0: 40%, v0.2.0: 60%, v1.0.0: 70%
+      functions: 40,    // v0.1.0: 40%, v0.2.0: 60%, v1.0.0: 70%
+      branches: 15,     // v0.1.0: 15%, v0.2.0: 50%, v1.0.0: 60%
+      statements: 40,   // v0.1.0: 40%, v0.2.0: 60%, v1.0.0: 70%
     },
   },
   resolve: {
