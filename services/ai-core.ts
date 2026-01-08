@@ -3,6 +3,8 @@ import { AppError, ApiError, AuthenticationError, SafetyError, RateLimitError } 
 import { cleanBase64, getMimeType } from '../shared/utils/image';
 import { logger } from '../shared/utils/logger';
 import { DEFAULT_RETRY_COUNT, RETRY_BASE_DELAY_MS, RETRY_MAX_JITTER_MS, DEFAULT_THINKING_BUDGET, DEFAULT_MAX_OUTPUT_TOKENS } from '../shared/constants';
+import { aiCache } from './ai-cache';
+import { aiCostTracker } from './ai-cost-tracker';
 
 export type AIModelType = 
   | 'gemini-3-flash-preview' 
@@ -27,6 +29,9 @@ export interface AIRequestConfig {
   maxRetries?: number;
   seed?: number;
   temperature?: number;
+  enableCache?: boolean;  // Enable request caching
+  sessionId?: string;      // Session ID for cost tracking
+  signal?: AbortSignal;    // Support for request cancellation
 }
 
 export interface AIResponse {
@@ -86,23 +91,64 @@ class AICoreService {
   }
 
   /**
-   * Orchestrates content generation with retry logic.
+   * Orchestrates content generation with retry logic, caching, and cost tracking.
    */
   public async generate(
     prompt: string,
     images: string[] = [],
     config: AIRequestConfig
   ): Promise<AIResponse> {
+    const sessionId = config.sessionId || 'default';
+    const enableCache = config.enableCache !== false; // Default to true
+    
+    // Check cache first
+    if (enableCache) {
+      const cacheConfig = {
+        aspectRatio: config.aspectRatio,
+        imageSize: config.imageSize,
+        temperature: config.temperature,
+      };
+      const fingerprint = aiCache.generateFingerprint(prompt, images, config.model, cacheConfig);
+      const cached = aiCache.get(fingerprint);
+      
+      if (cached) {
+        // Track cached request
+        aiCostTracker.trackRequest(sessionId, config.model, prompt, cached.text, true, true);
+        return cached;
+      }
+    }
+    
     const retries = config.maxRetries ?? DEFAULT_RETRY_COUNT;
     let lastError: any;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
+        // Check if request was aborted
+        if (config.signal?.aborted) {
+          throw new ApiError('Request aborted by user', 499);
+        }
+        
         // ALWAYS create a fresh instance per request to ensure latest key is used.
         const apiKey = this.getApiKey();
         const ai = new GoogleGenAI({ apiKey });
         
-        return await this.executeRequest(ai, prompt, images, config);
+        const response = await this.executeRequest(ai, prompt, images, config);
+        
+        // Cache successful response
+        if (enableCache && response) {
+          const cacheConfig = {
+            aspectRatio: config.aspectRatio,
+            imageSize: config.imageSize,
+            temperature: config.temperature,
+          };
+          const fingerprint = aiCache.generateFingerprint(prompt, images, config.model, cacheConfig);
+          aiCache.set(fingerprint, response);
+        }
+        
+        // Track successful request
+        aiCostTracker.trackRequest(sessionId, config.model, prompt, response.text, false, true);
+        
+        return response;
       } catch (error) {
         lastError = error;
         const normalized = this.normalizeError(error);
@@ -113,6 +159,8 @@ class AICoreService {
           normalized instanceof AuthenticationError || 
           (normalized instanceof ApiError && normalized.statusCode === 400)
         ) {
+          // Track failed request
+          aiCostTracker.trackRequest(sessionId, config.model, prompt, undefined, false, false);
           throw normalized;
         }
 
@@ -124,6 +172,9 @@ class AICoreService {
         }
       }
     }
+    
+    // Track final failure
+    aiCostTracker.trackRequest(sessionId, config.model, prompt, undefined, false, false);
     throw this.normalizeError(lastError);
   }
 

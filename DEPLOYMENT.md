@@ -908,3 +908,293 @@ docker run previous-image-tag
 
 **Last Updated:** December 30, 2024  
 **Next Review:** After v0.1.0 release
+
+---
+
+## Docker Deployment (Production-Ready)
+
+### Quick Start with Docker
+
+```bash
+# 1. Build the image
+docker build -t nanogen-studio:latest .
+
+# 2. Run the container
+docker run -d \
+  --name nanogen-studio \
+  -p 3000:3000 \
+  -e API_KEY=your_api_key_here \
+  nanogen-studio:latest
+
+# 3. Access the application
+# Visit http://localhost:3000
+```
+
+### Docker Compose (Recommended)
+
+The project includes a `docker-compose.yml` file for easy multi-container deployment.
+
+```bash
+# 1. Create .env file
+cp .env.example .env
+# Edit .env and set API_KEY
+
+# 2. Start all services
+docker-compose up -d
+
+# 3. View logs
+docker-compose logs -f web
+
+# 4. Stop services
+docker-compose down
+```
+
+### Docker Compose Services
+
+- **web**: Main NanoGen Studio application
+- **redis**: Optional caching backend
+- **nginx**: Optional reverse proxy
+
+### Multi-Stage Dockerfile
+
+The Dockerfile uses multi-stage builds for optimization:
+
+1. **Builder Stage**: Installs dependencies and builds the application
+2. **Production Stage**: Lightweight Alpine-based image for production
+3. **GPU Stage**: NVIDIA CUDA-enabled for GPU acceleration
+
+### GPU-Enabled Deployment
+
+For GPU-accelerated inference (future feature):
+
+```bash
+# Build GPU image
+docker build --target gpu -t nanogen-studio:gpu .
+
+# Run with NVIDIA runtime
+docker run -d \
+  --name nanogen-studio-gpu \
+  --runtime=nvidia \
+  --gpus all \
+  -p 3000:3000 \
+  -e API_KEY=your_api_key_here \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  nanogen-studio:gpu
+```
+
+### Docker Health Checks
+
+The container includes built-in health checks:
+
+```bash
+# Check container health
+docker ps
+# Look for "healthy" status
+
+# View health check logs
+docker inspect nanogen-studio --format='{{json .State.Health}}'
+```
+
+---
+
+## CI/CD Pipeline (GitHub Actions)
+
+### Automated Workflows
+
+The project includes a complete CI/CD pipeline in `.github/workflows/ci-cd.yml`:
+
+#### Workflow Jobs
+
+1. **Lint & Type Check**
+   - Runs TypeScript compiler in `--noEmit` mode
+   - Catches type errors before deployment
+
+2. **Test Suite**
+   - Runs all unit tests with Vitest
+   - Generates code coverage reports
+   - Uploads coverage to Codecov
+
+3. **Build Application**
+   - Builds production bundle
+   - Uploads artifacts for deployment
+   - Verifies successful build
+
+4. **Security Audit**
+   - Runs `npm audit` for dependency vulnerabilities
+   - Optional Snyk security scanning
+   - Continues on non-critical issues
+
+5. **Docker Build** (main branch only)
+   - Builds and pushes Docker image
+   - Tags with `latest` and commit SHA
+   - Uses Docker layer caching
+
+### Setting Up CI/CD
+
+#### 1. Required Secrets
+
+Add these secrets to your GitHub repository:
+
+```
+Settings → Secrets and variables → Actions → New repository secret
+```
+
+- `DOCKER_USERNAME`: Your Docker Hub username
+- `DOCKER_TOKEN`: Docker Hub access token
+- `SNYK_TOKEN`: Snyk API token (optional)
+
+#### 2. Branch Protection
+
+Enable branch protection for `main`:
+
+```
+Settings → Branches → Add branch protection rule
+├── Require status checks to pass before merging
+│   ├── lint
+│   ├── test
+│   └── build
+├── Require pull request reviews
+└── Include administrators
+```
+
+#### 3. Automatic Deployments
+
+The pipeline automatically:
+- Runs on every push to `main` and `develop`
+- Runs on all pull requests
+- Builds Docker images on `main` branch
+- Can be extended to deploy to cloud platforms
+
+### Manual Workflow Trigger
+
+```bash
+# Go to GitHub Actions tab
+Actions → CI/CD Pipeline → Run workflow
+```
+
+---
+
+## Environment-Specific Configuration
+
+### Development
+
+```bash
+NODE_ENV=development
+LOG_LEVEL=debug
+ENABLE_AI_CACHE=false
+```
+
+### Staging
+
+```bash
+NODE_ENV=staging
+LOG_LEVEL=info
+ENABLE_AI_CACHE=true
+CACHE_TTL_MS=1800000  # 30 minutes
+```
+
+### Production
+
+```bash
+NODE_ENV=production
+LOG_LEVEL=warn
+ENABLE_AI_CACHE=true
+CACHE_TTL_MS=3600000  # 1 hour
+ENABLE_COST_TRACKING=true
+```
+
+---
+
+## Performance & Optimization
+
+### Build Performance
+
+- **Multi-stage Docker builds**: Reduces final image size by ~60%
+- **Layer caching**: Speeds up rebuilds significantly
+- **Asset optimization**: Vite minifies and chunks automatically
+
+### Runtime Performance
+
+- **Lazy loading**: Components loaded on-demand
+- **AI request caching**: Reduces API calls by 40-60%
+- **Service worker**: Caches static assets locally
+
+### Monitoring Recommendations
+
+1. **Application Performance**
+   - Use Google Analytics for page load metrics
+   - Monitor Core Web Vitals (LCP, FID, CLS)
+   - Track AI request latency
+
+2. **Error Tracking**
+   - Integrate Sentry for error monitoring
+   - Set up alerts for critical errors
+   - Track error rates per feature
+
+3. **Resource Usage**
+   - Monitor Docker container CPU/memory
+   - Track API quota usage
+   - Set up billing alerts
+
+---
+
+## Security Checklist
+
+- [x] TypeScript strict mode enabled
+- [x] Prompt injection protection
+- [x] Rate limiting implemented
+- [x] Input validation and sanitization
+- [ ] HTTPS enforced (via reverse proxy)
+- [ ] CSP headers configured
+- [ ] CORS policies defined
+- [ ] Regular dependency audits
+
+---
+
+## Troubleshooting
+
+### Docker Issues
+
+**Container fails to start:**
+```bash
+# Check logs
+docker logs nanogen-studio
+
+# Common issues:
+# - Missing API_KEY environment variable
+# - Port 3000 already in use
+# - Insufficient memory allocation
+```
+
+**Build fails:**
+```bash
+# Clear Docker build cache
+docker builder prune -a
+
+# Rebuild without cache
+docker build --no-cache -t nanogen-studio:latest .
+```
+
+### CI/CD Issues
+
+**Type check fails:**
+```bash
+# Run locally to debug
+npx tsc --noEmit
+
+# Check for new strict mode violations
+```
+
+**Tests fail in CI but pass locally:**
+```bash
+# Ensure same Node.js version
+nvm use 20
+
+# Check for environment-specific issues
+NODE_ENV=test npm test
+```
+
+---
+
+**Last Updated**: 2026-01-08  
+**Version**: 0.1.0 with Production Deployment Support

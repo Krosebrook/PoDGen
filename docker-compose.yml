@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # NanoGen Studio Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: nanogen-studio:latest
+    container_name: nanogen-studio-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - API_KEY=${API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nanogen-network
+
+  # Optional: Redis Cache (for future AI caching backend)
+  redis:
+    image: redis:7-alpine
+    container_name: nanogen-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - nanogen-network
+
+  # Optional: Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nanogen-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+    networks:
+      - nanogen-network
+
+  # GPU-enabled variant (uncomment to use)
+  # web-gpu:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: gpu
+  #   image: nanogen-studio:gpu
+  #   container_name: nanogen-studio-gpu
+  #   runtime: nvidia
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - API_KEY=${API_KEY}
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  #   restart: unless-stopped
+  #   networks:
+  #     - nanogen-network
+
+networks:
+  nanogen-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
