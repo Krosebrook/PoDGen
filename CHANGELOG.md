@@ -8,16 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Testing infrastructure with Vitest, React Testing Library, and MSW
+  - Vitest test runner with TypeScript and React support
+  - React Testing Library for component testing
+  - Mock Service Worker (MSW) for API mocking
+  - Test utilities and helper functions in `/tests/utils.tsx`
+  - Coverage reporting with v8 provider
+  - Test scripts: `npm test`, `npm run test:watch`, `npm run test:ui`, `npm run test:coverage`
+- Example tests for error classes (18 tests, 100% coverage)
+- Example tests for image utilities (20 tests)
+- MSW handlers for Gemini API mocking
+- Test setup file with automatic MSW server lifecycle management
 - ErrorBoundary component for graceful error handling in React
 - Comprehensive constants system for API, Canvas, and Validation configurations
 - Structured logging system with logger utility replacing console.log/console.error
 - Documentation: CHANGELOG.md for version tracking
 - Documentation: Enhanced code documentation and JSDoc comments
+- Documentation: Updated README.md with testing commands
+- Documentation: Updated CONTRIBUTING.md with comprehensive testing guidelines
 
 ### Changed
 - Refactored codebase to use centralized logger instead of direct console calls
 - Extracted magic numbers to shared constants for better maintainability
 - Improved error handling across all features with ErrorBoundary wrappers
+- Updated `.gitignore` to exclude coverage directory and test artifacts
 
 ### Fixed
 - Improved error logging consistency across the application

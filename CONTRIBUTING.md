@@ -308,11 +308,54 @@ console.log('Debug info');  // Only in development/debugging
 
 ## Testing Guidelines
 
+### Test Framework
+
+NanoGen Studio uses **Vitest** for testing, which provides:
+- Fast, Vite-native test execution
+- React Testing Library integration
+- MSW (Mock Service Worker) for API mocking
+- Full TypeScript support
+- Coverage reporting with v8
+
 ### Test Structure
 
+Tests should be co-located with the source files they test:
+
+```
+src/
+├── shared/
+│   └── utils/
+│       ├── errors.ts
+│       ├── errors.test.ts  ← Test file
+│       ├── image.ts
+│       └── image.test.ts   ← Test file
+```
+
+#### Example: Unit Test
+
 ```typescript
-// ComponentName.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
+// errors.test.ts
+import { describe, it, expect } from 'vitest';
+import { ValidationError } from './errors';
+
+describe('ValidationError', () => {
+  it('should create error with correct properties', () => {
+    const error = new ValidationError('Invalid input');
+    
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(error.message).toBe('Invalid input');
+    expect(error.statusCode).toBe(400);
+  });
+});
+```
+
+#### Example: Component Test
+
+```typescript
+// Button.test.tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Button } from './Button';
 
 describe('Button', () => {
@@ -321,35 +364,140 @@ describe('Button', () => {
     expect(screen.getByText('Click me')).toBeInTheDocument();
   });
 
-  it('calls onClick when clicked', () => {
-    const handleClick = jest.fn();
-    render(<Button onClick={handleClick}>Click</Button>);
+  it('calls onClick when clicked', async () => {
+    const handleClick = vi.fn();
+    const user = userEvent.setup();
     
-    fireEvent.click(screen.getByText('Click'));
+    render(<Button onClick={handleClick}>Click</Button>);
+    await user.click(screen.getByText('Click'));
+    
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 });
 ```
 
+#### Example: API Mocking with MSW
+
+```typescript
+// api.test.ts
+import { describe, it, expect } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/tests/mocks/server';
+
+describe('AI API Integration', () => {
+  it('handles successful response', async () => {
+    server.use(
+      http.post('https://api.example.com/generate', () => {
+        return HttpResponse.json({ result: 'success' });
+      })
+    );
+    
+    // Test your API call here
+  });
+  
+  it('handles error response', async () => {
+    server.use(
+      http.post('https://api.example.com/generate', () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+    
+    // Test error handling
+  });
+});
+```
+
+### Test Utilities
+
+Use the test utilities from `/tests/utils.tsx`:
+
+```typescript
+import { render, createMockImageFile, waitFor } from '@/tests/utils';
+
+// Create mock files for testing
+const mockImage = createMockImageFile('test.png', 100, 100);
+
+// Custom render with providers (if needed)
+render(<MyComponent />);
+
+// Wait for async conditions
+await waitFor(() => someCondition === true);
+```
+
 ### Coverage Requirements
 
-- **Critical paths**: 80%+ coverage
-- **Utilities**: 90%+ coverage
-- **UI components**: 60%+ coverage
-- **Overall project**: 70%+ coverage
+- **Critical paths**: 80%+ coverage (AI core, error handling, image processing)
+- **Utilities**: 90%+ coverage (pure functions, helpers)
+- **UI components**: 60%+ coverage (user interactions, rendering)
+- **Overall project**: 70%+ coverage (target for v1.0.0)
+
+**Current Coverage:** 41.93% overall (v0.1.0 - Foundation)
 
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests once
 npm test
 
-# Run with coverage
+# Run tests in watch mode (for development)
+npm run test:watch
+
+# Run tests with interactive UI
+npm run test:ui
+
+# Generate coverage report
 npm run test:coverage
 
-# Run in watch mode
-npm run test:watch
+# Run specific test file
+npx vitest shared/utils/errors.test.ts
 ```
+
+### Best Practices
+
+1. **Write Descriptive Test Names**
+   ```typescript
+   // ✅ Good
+   it('should throw ValidationError when email is invalid', () => {});
+   
+   // ❌ Bad
+   it('test email', () => {});
+   ```
+
+2. **Test Behavior, Not Implementation**
+   ```typescript
+   // ✅ Good - Tests what user sees
+   expect(screen.getByText('Loading...')).toBeInTheDocument();
+   
+   // ❌ Bad - Tests internal state
+   expect(component.state.isLoading).toBe(true);
+   ```
+
+3. **Use Appropriate Matchers**
+   ```typescript
+   // ✅ Good
+   expect(result).toBe(true);
+   expect(array).toHaveLength(3);
+   expect(error).toBeInstanceOf(ValidationError);
+   
+   // ❌ Bad
+   expect(result === true).toBe(true);
+   ```
+
+4. **Clean Up After Tests**
+   ```typescript
+   import { afterEach, vi } from 'vitest';
+   
+   afterEach(() => {
+     vi.clearAllMocks();
+   });
+   ```
+
+5. **Test Edge Cases**
+   - Empty strings
+   - Null/undefined values
+   - Boundary conditions
+   - Error states
+   - Async operations
 
 ---
 
